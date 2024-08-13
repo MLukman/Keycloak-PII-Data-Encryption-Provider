@@ -28,17 +28,21 @@ Copy paste the packaged JAR file from inside `target` folder into Keycloak's `pr
 Use this method if this provider needs to be pre-packaged inside a custom Keycloak Docker image. Below is a sample Dockerfile:
 
 ```dockerfile
+# ARG defined before FROM in multi-staged Dockerfile is shared among the stages
+ARG KEYCLOAK_VERSION=25.0.2
+
 # Build the provider
 FROM maven:3.8.1-openjdk-17-slim AS keycloak-pii-data-encryption
+ARG KEYCLOAK_VERSION # Dockerfile peculiarity that requires ARG defined before FROM to be re-declared afterwards if we want to use instead the stage
 WORKDIR /app
 RUN apt-get update && apt-get install -y git && apt-get clean
 RUN git clone https://github.com/MLukman/Keycloak-PII-Data-Encryption-Provider.git .
-RUN mvn clean package
+RUN mvn clean package -Dkeycloak.version=$KEYCLOAK_VERSION
 
 ################################################################################
 
 # Base image from official keycloak
-FROM quay.io/keycloak/keycloak:25.0.1
+FROM quay.io/keycloak/keycloak:$KEYCLOAK_VERSION
 
 # Add provider JAR
 COPY --from=keycloak-pii-data-encryption /app/target/*.jar /opt/keycloak/providers
@@ -61,3 +65,9 @@ Enabling the encryption for a specific user attribute is as simple as adding the
 ![Screenshot of "Add validator" popup dialog](screenshot-add-validator.png)
 
 This provider also automatically encrypts any user attributes that have their names start with "pii-" prefix even without the validator.
+
+## Known issues/limitations
+
+1. Built-in user attributes `username` and `email` as well as unmanaged attributes are not supported.
+2. If the encrypted values in the database cannot be decrypted for whatever reason, the base64 encrypted value will be displayed as-is to the users and clients. This may cause confusions.
+
