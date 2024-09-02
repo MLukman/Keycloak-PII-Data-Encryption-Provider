@@ -29,7 +29,7 @@ Use this method if this provider needs to be pre-packaged inside a custom Keyclo
 
 ```dockerfile
 # ARG defined before FROM in multi-staged Dockerfile is shared among the stages
-ARG KEYCLOAK_VERSION=25.0.2
+ARG KEYCLOAK_VERSION=25.0.4
 
 # Build the provider
 FROM maven:3.8.1-openjdk-17-slim AS keycloak-pii-data-encryption
@@ -66,8 +66,15 @@ Enabling the encryption for a specific user attribute is as simple as adding the
 
 This provider also automatically encrypts any user attributes that have their names start with "pii-" prefix even without the validator.
 
+### Verifying if the attributes are really encrypted
+
+Browse the Keycloak database using any tool (e.g. phpMyAdmin for MySQL database) and navigate to the table `USER_ATTRIBUTE`. Verify that the column `VALUE` for the rows corresponding to user attributes that have been the encryption enabled will contain Base-64 strings that start with `$$$`, like below:
+
+![Encrypted database value](screenshot-encrypted-db-values.png)
+
 ## Known issues/limitations
 
 1. Built-in user attributes `username` and `email` as well as unmanaged attributes are not supported.
 2. If the encrypted values in the database cannot be decrypted for whatever reason, the base64 encrypted value will be displayed as-is to the users and clients. This may cause confusions.
+3. The encryption is only applied to user attributes when they are updated by the users after the encryption setting is enabled in the admin console. Until they are updated, their values remain unencrypted in the database. *(Idea for future enhancement: to allow admins to force encryption/decryption of existing attributes upon enabling/disabling the encryption setting)*
 

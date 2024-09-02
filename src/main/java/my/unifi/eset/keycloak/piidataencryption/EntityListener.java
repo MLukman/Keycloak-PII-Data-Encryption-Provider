@@ -5,6 +5,8 @@ import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
+import org.hibernate.event.spi.PostLoadEvent;
+import org.hibernate.event.spi.PostLoadEventListener;
 import org.hibernate.event.spi.PreInsertEvent;
 import org.hibernate.event.spi.PreInsertEventListener;
 import org.hibernate.event.spi.PreLoadEvent;
@@ -13,6 +15,7 @@ import org.hibernate.event.spi.PreUpdateEvent;
 import org.hibernate.event.spi.PreUpdateEventListener;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.service.spi.SessionFactoryServiceRegistry;
+import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.jpa.entities.UserAttributeEntity;
 import org.keycloak.representations.userprofile.config.UPAttribute;
@@ -26,13 +29,16 @@ import org.keycloak.utils.KeycloakSessionUtil;
  *
  * @author MLukman (https://github.com/MLukman)
  */
-public class EntityListener implements Integrator, PreLoadEventListener, PreInsertEventListener, PreUpdateEventListener {
+public class EntityListener implements Integrator, PreLoadEventListener, PostLoadEventListener, PreInsertEventListener, PreUpdateEventListener {
+
+    static final Logger logger = Logger.getLogger(EncryptionUtil.class);
 
     @Override
     public void integrate(Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sessionFactory) {
         EventListenerRegistry eventListenerRegistry = sessionFactory.getServiceRegistry()
                 .getService(EventListenerRegistry.class);
         eventListenerRegistry.appendListeners(EventType.PRE_LOAD, this);
+        eventListenerRegistry.appendListeners(EventType.POST_LOAD, this);
         eventListenerRegistry.appendListeners(EventType.PRE_UPDATE, this);
         eventListenerRegistry.appendListeners(EventType.PRE_INSERT, this);
     }
@@ -43,14 +49,21 @@ public class EntityListener implements Integrator, PreLoadEventListener, PreInse
 
     @Override
     public void onPreLoad(PreLoadEvent ple) {
-        if (ple.getEntity() instanceof UserAttributeEntity) {
+        if (ple.getEntity() instanceof UserAttributeEntity uae) {
             String[] propertyNames = ple.getPersister().getEntityMetamodel().getPropertyNames();
             Object[] state = ple.getState();
             for (int i = 0; i < propertyNames.length; i++) {
-                if ("value".equalsIgnoreCase(propertyNames[i])) {
+                if ("value".equalsIgnoreCase(propertyNames[i]) && EncryptionUtil.isEncryptedValue((String) state[i])) {
                     state[i] = EncryptionUtil.decryptValue((String) state[i]);
                 }
             }
+        }
+    }
+
+    @Override
+    public void onPostLoad(PostLoadEvent ple) {
+        if (ple.getEntity() instanceof UserAttributeEntity uae && EncryptionUtil.isEncryptedValue(uae.getValue())) {
+            logger.warnf("Event: ATTRIBUTE_DECRYPTION_FAILURE, User: %s, Attribute: %s", uae.getUser().getUsername(), uae.getName());
         }
     }
 
@@ -75,12 +88,21 @@ public class EntityListener implements Integrator, PreLoadEventListener, PreInse
     }
 
     void doEncryptValue(UserAttributeEntity uae, String[] propertyNames, Object[] state) {
+        if (uae.getValue() == null || EncryptionUtil.isEncryptedValue(uae.getValue())) {
+            // Skipped
+            return;
+        }
         String encryptedValue = EncryptionUtil.encryptValue(uae.getValue());
-        for (int i = 0; i < propertyNames.length; i++) {
-            if ("value".equalsIgnoreCase(propertyNames[i])) {
-                state[i] = encryptedValue;
+        if (EncryptionUtil.isEncryptedValue(encryptedValue)) {
+            for (int i = 0; i < propertyNames.length; i++) {
+                if ("value".equalsIgnoreCase(propertyNames[i])) {
+                    state[i] = encryptedValue;
+                    logger.debugf("Event: ATTRIBUTE_ENCRYPTION_SUCCESS, User: %s, Attribute: %s", uae.getUser().getUsername(), uae.getName());
+                    return;
+                }
             }
         }
+        logger.warnf("Event: ATTRIBUTE_ENCRYPTION_FAILURE, User: %s, Attribute: %s", uae.getUser().getUsername(), uae.getName());
     }
 
     boolean shouldEncryptAttribute(UserAttributeEntity userAttributeEntity) {
@@ -91,7 +113,7 @@ public class EntityListener implements Integrator, PreLoadEventListener, PreInse
         UserProfileProvider upp = ks.getProvider(UserProfileProvider.class);
         if (upp instanceof DeclarativeUserProfileProvider dup) {
             UPAttribute upa = dup.getConfiguration().getAttribute(userAttributeEntity.getName());
-            if (upa != null && upa.getValidations().containsKey("pii-data-encryption")) {
+            if (upa != null && upa.getValidations().containsKey(PiiDataEncryptionValidatorProvider.ID)) {
                 return true;
             }
         }

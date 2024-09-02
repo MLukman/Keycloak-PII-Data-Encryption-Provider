@@ -17,26 +17,32 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.lang3.ArrayUtils;
 
 /**
- * Provide encryption functionalities
+ * Provide encryption functionalities.
  *
  * @author MLukman (https://github.com/MLukman)
  */
 public class EncryptionUtil {
 
     /**
-     * Encryption algorithm to use
+     * Encryption algorithm to use.
      */
     static String algorithm = "AES/CBC/PKCS5Padding";
 
     /**
      * String to prefixed to encrypted value before it is stored in db to
-     * prevent double encryption
+     * prevent double encryption. MUST NOT BE AN EMPTY STRING.
      */
-    static String safeguardPrefix = "$$$";
+    static final String CIPHERTEXT_PREFIX = "$$$";
 
+    /**
+     * Encrypt the passed String value.
+     *
+     * @param value String to encrypt
+     * @return The encrypted value
+     */
     public static String encryptValue(String value) {
         try {
-            if (safeguardPrefix.length() > 0 && value.startsWith(safeguardPrefix)) {
+            if (value == null || isEncryptedValue(value)) {
                 return value;
             }
             byte[] iv = new byte[16];
@@ -46,9 +52,7 @@ public class EncryptionUtil {
             SecretKey key = getEncryptionKey();
             cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
             byte[] cipherText = cipher.doFinal(value.getBytes());
-            return safeguardPrefix + Base64.getEncoder().encodeToString(
-                    ArrayUtils.addAll(iv, cipherText)
-            );
+            return CIPHERTEXT_PREFIX + Base64.getEncoder().encodeToString(ArrayUtils.addAll(iv, cipherText));
         } catch (NoSuchAlgorithmException
                 | BadPaddingException
                 | IllegalBlockSizeException
@@ -59,14 +63,18 @@ public class EncryptionUtil {
         }
     }
 
+    /**
+     * Decrypt the passed value.
+     *
+     * @param value String to decrypt
+     * @return The decrypted value
+     */
     public static String decryptValue(String value) {
         try {
-            if (safeguardPrefix.length() > 0 && !value.startsWith(safeguardPrefix)) {
+            if (value == null || !isEncryptedValue(value)) {
                 return value;
             }
-            byte[] cipherTextWithIv = Base64.getDecoder().decode(
-                    value.substring(safeguardPrefix.length())
-            );
+            byte[] cipherTextWithIv = Base64.getDecoder().decode(value.substring(CIPHERTEXT_PREFIX.length()));
             byte[] iv = ArrayUtils.subarray(cipherTextWithIv, 0, 16);
             byte[] cipherText = ArrayUtils.subarray(cipherTextWithIv, 16, cipherTextWithIv.length);
             Cipher cipher = Cipher.getInstance(algorithm);
@@ -83,6 +91,16 @@ public class EncryptionUtil {
                 | IllegalArgumentException ex) {
             return value;
         }
+    }
+
+    /**
+     * Check if the passed value is encrypted.
+     *
+     * @param value String to check whether encrypted or not
+     * @return true if encrypted value, false otherwise.
+     */
+    public static boolean isEncryptedValue(String value) {
+        return value != null && value.startsWith(CIPHERTEXT_PREFIX);
     }
 
     static SecretKey getEncryptionKey() throws NoSuchAlgorithmException {

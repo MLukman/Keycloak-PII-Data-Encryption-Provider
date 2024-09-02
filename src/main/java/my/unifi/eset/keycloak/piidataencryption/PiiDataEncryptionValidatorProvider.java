@@ -16,9 +16,11 @@ import org.keycloak.validate.ValidatorConfig;
  */
 public class PiiDataEncryptionValidatorProvider extends AbstractSimpleValidator implements ConfiguredProvider {
 
+    public static final String ID = "pii-data-encryption";
+
     @Override
     public String getId() {
-        return "pii-data-encryption";
+        return ID;
     }
 
     @Override
@@ -38,7 +40,7 @@ public class PiiDataEncryptionValidatorProvider extends AbstractSimpleValidator 
 
     @Override
     protected void doValidate(Object o, String string, ValidationContext vc, ValidatorConfig vc1) {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+        throw new UnsupportedOperationException("This code should not be executed because skipValidation() returns true");
     }
 
 }
