@@ -1,0 +1,54 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="mlukman" id="20241104-1">
+        <createTable tableName="USER_ENTITY_ENCRYPTED">
+            <column name="ID" type="VARCHAR(36)">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="USER_ID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USERNAME" type="VARCHAR(500)" />
+            <column name="EMAIL" type="VARCHAR(500)" />
+            <column name="FIRST_NAME" type="VARCHAR(500)" />
+            <column name="LAST_NAME" type="VARCHAR(500)" />
+        </createTable>
+    </changeSet>
+    <changeSet author="mlukman" id="20241104-2">
+        <createIndex associatedWith="" indexName="USER_ID_FK" tableName="USER_ENTITY_ENCRYPTED">
+            <column name="USER_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="mlukman" id="20241104-3">
+        <addForeignKeyConstraint baseColumnNames="USER_ID" baseTableName="USER_ENTITY_ENCRYPTED" constraintName="USER_ENTITY_ENCRYPTED_FK_USER_ID" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" referencedColumnNames="ID" referencedTableName="USER_ENTITY" validate="true"/>
+    </changeSet>
+    <changeSet author="mlukman" id="20241107-1">
+        <createTable tableName="USER_ATTRIBUTE_ENCRYPTED">
+            <column name="ID" type="VARCHAR(36)">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="USER_ID" type="VARCHAR(36)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="USER_ATTRIBUTE_ID" type="VARCHAR(36)" />
+            <column name="NAME" type="VARCHAR(255)" />
+            <column name="VALUE" type="VARCHAR(1000)" />
+        </createTable>
+    </changeSet>
+    <changeSet author="mlukman" id="20241107-2">
+        <createIndex associatedWith="" indexName="USER_ID_FK" tableName="USER_ATTRIBUTE_ENCRYPTED">
+            <column name="USER_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="mlukman" id="20241107-3">
+        <addForeignKeyConstraint baseColumnNames="USER_ID" baseTableName="USER_ATTRIBUTE_ENCRYPTED" constraintName="USER_ATTRIBUTE_ENCRYPTED_FK_USER_ID" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" referencedColumnNames="ID" referencedTableName="USER_ENTITY" validate="true"/>
+    </changeSet>
+    <changeSet author="mlukman" id="20241107-4">
+        <createIndex associatedWith="" indexName="USER_ATTRIBUTE_ID_FK" tableName="USER_ATTRIBUTE_ENCRYPTED">
+            <column name="USER_ATTRIBUTE_ID"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="mlukman" id="20241107-5">
+        <addForeignKeyConstraint baseColumnNames="USER_ATTRIBUTE_ID" baseTableName="USER_ATTRIBUTE_ENCRYPTED" constraintName="USER_ATTRIBUTE_ENCRYPTED_FK_USER_ATTRIBUTE_ID" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" referencedColumnNames="ID" referencedTableName="USER_ATTRIBUTE" validate="true"/>
+    </changeSet>
+</databaseChangeLog>

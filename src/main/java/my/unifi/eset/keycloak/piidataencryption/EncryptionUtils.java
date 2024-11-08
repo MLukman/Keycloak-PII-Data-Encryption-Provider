@@ -15,13 +15,14 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.lang3.ArrayUtils;
+import org.jboss.logging.Logger;
 
 /**
  * Provide encryption functionalities.
  *
  * @author MLukman (https://github.com/MLukman)
  */
-public class EncryptionUtil {
+public final class EncryptionUtils {
 
     /**
      * Encryption algorithm to use.
@@ -33,6 +34,8 @@ public class EncryptionUtil {
      * prevent double encryption. MUST NOT BE AN EMPTY STRING.
      */
     static final String CIPHERTEXT_PREFIX = "$$$";
+
+    static SecretKeySpec key = null;
 
     /**
      * Encrypt the passed String value.
@@ -103,14 +106,21 @@ public class EncryptionUtil {
         return value != null && value.startsWith(CIPHERTEXT_PREFIX);
     }
 
-    static SecretKey getEncryptionKey() throws NoSuchAlgorithmException {
-        String key = System.getenv("KC_PII_ENCKEY");
-        if (key == null || key.isBlank()) {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(System.getenv("KC_DB_URL").getBytes());
-            key = HexFormat.of().formatHex(md.digest()).toLowerCase();
+    static synchronized SecretKey getEncryptionKey() throws NoSuchAlgorithmException {
+        if (key == null) {
+            String rawkey = System.getenv("KC_PII_ENCKEY");
+            if (rawkey == null || rawkey.isBlank()) {
+                MessageDigest md = MessageDigest.getInstance("MD5");
+                md.update(System.getenv("KC_DB_URL").getBytes());
+                rawkey = HexFormat.of().formatHex(md.digest()).toLowerCase();
+                Logger.getLogger(EncryptionUtils.class).warnf("Encryption key generated using MD5 hash of KC_DB_URL envvar is %s. It is recommended to set this key as KC_PII_ENCKEY envvar.", rawkey);
+            }
+            key = new SecretKeySpec(rawkey.getBytes(), "AES");
         }
-        return new SecretKeySpec(key.getBytes(), "AES");
+        return key;
+    }
+
+    private EncryptionUtils() {
     }
 
 }
