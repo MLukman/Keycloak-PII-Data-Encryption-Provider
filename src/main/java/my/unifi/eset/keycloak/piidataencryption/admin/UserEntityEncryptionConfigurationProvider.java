@@ -1,10 +1,12 @@
-package my.unifi.eset.keycloak.piidataencryption;
+package my.unifi.eset.keycloak.piidataencryption.admin;
 
+import my.unifi.eset.keycloak.piidataencryption.utils.LogicUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.FlushModeType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import my.unifi.eset.keycloak.piidataencryption.listeners.EventListenerFactory;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserProvider;
 import org.keycloak.Config;
 import org.keycloak.component.ComponentModel;
@@ -18,7 +20,6 @@ import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.provider.ProviderConfigurationBuilder;
 import org.keycloak.services.ui.extend.UiTabProvider;
 import org.keycloak.services.ui.extend.UiTabProviderFactory;
-import org.keycloak.utils.KeycloakSessionUtil;
 
 public class UserEntityEncryptionConfigurationProvider implements UiTabProvider, UiTabProviderFactory<ComponentModel> {
 
@@ -72,8 +73,8 @@ public class UserEntityEncryptionConfigurationProvider implements UiTabProvider,
 
     @Override
     public void validateConfiguration(KeycloakSession session, RealmModel realm, ComponentModel model) throws ComponentValidationException {
-        boolean providerActive = KeycloakSessionUtil.getKeycloakSession().getProvider(UserProvider.class) instanceof EncryptedUserProvider;
-        boolean eventListenerActive = realm.getEventsListenersStream().anyMatch((t) -> t.equals(EventListener.ID));
+        boolean providerActive = session.getProvider(UserProvider.class) instanceof EncryptedUserProvider;
+        boolean eventListenerActive = realm.getEventsListenersStream().anyMatch((t) -> t.equals(EventListenerFactory.ID));
         if (model.get("enable", false) && !(providerActive && eventListenerActive)) {
             throw new ComponentValidationException("\nUser entity encryption cannot be enabled until \n(1) EncryptedUserProvider is enabled using --spi-user-provider=jpa-encrypted build/start flag \n(2) pii-data-encryption' event listener is added to the realm events setting");
         }

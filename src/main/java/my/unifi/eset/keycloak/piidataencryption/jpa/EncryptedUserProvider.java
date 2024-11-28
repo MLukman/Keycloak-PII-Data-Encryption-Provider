@@ -7,7 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import my.unifi.eset.keycloak.piidataencryption.LogicUtils;
+import my.unifi.eset.keycloak.piidataencryption.utils.LogicUtils;
 import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;

@@ -1,10 +1,13 @@
 # Keycloak PII Data Encryption Provider
+[![Sponsor MLukman](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/MLukman)
 
 > News: **Version 2 is here!** Now this provider also encrypts the common user attributes `username`, `email`, `firstName` and `lastName`. It also preserves the ability to search by the encrypted fields, albeit only exact match search is possible.
 
 ## Introduction
 
 This provider encrypts user attribute values before storing them to the database and decrypt them upon loading from the database. This is to address data security regulations such as GDPR that require any PII data to not be stored in plain/raw format at rest.
+
+***Important: this provider requires Keycloak version 24.x and above only.*** 
 
 ## How to install
 
@@ -31,11 +34,11 @@ Use this method if this provider needs to be pre-packaged inside a custom Keyclo
 
 ```dockerfile
 # ARG defined before FROM in multi-staged Dockerfile is shared among the stages
-ARG KEYCLOAK_VERSION=26.0.5
+ARG KEYCLOAK_VERSION=26.0.6
 
 # Build the provider
 FROM maven:3.8.1-openjdk-17-slim AS keycloak-pii-data-encryption
-ARG KEYCLOAK_VERSION # Dockerfile peculiarity that requires ARG defined before FROM to be re-declared afterwards if we want to use instead the stage
+ARG KEYCLOAK_VERSION # Dockerfile peculiarity that requires ARG defined before FROM to be re-declared afterwards if we want to use it in the stage
 WORKDIR /app
 RUN apt-get update && apt-get install -y git && apt-get clean
 RUN git clone https://github.com/MLukman/Keycloak-PII-Data-Encryption-Provider.git .
@@ -91,18 +94,18 @@ To enable encryption of any custom attributes, go to the `User profile` tab and 
 
 This provider also automatically encrypts any user attributes that have their names start with "pii-" prefix even without the validator.
 
-### Verifying if the attributes are really encrypted
+### Verifying if the profile data are really encrypted (also explanations on how the encryptions work)
 
 1. Browse the Keycloak database using any tool (e.g. phpMyAdmin for MySQL database).
 2. Navigate to the table `USER_ENTITY`. Verify that the columns `USERNAME`, `EMAIL`, `FIRST_NAME` and `LAST_NAME` for the rows corresponding to users that have the encryption enabled will contain 40-characters of hexadecimal hash values, e.g. `6ea7bdc669b8926a75fe165989270ed025ac94dd`. Those hash values will be used for searching users based on those columns.
 3. Navigate to the table `USER_ENTITY_ENCRYPTED` to verify that those corresponding columns contain the encrypted values in the format of Base-64 strings that start with `$$$`, e.g. `$$$4SfpYL5c5rkn69b...` (the length may varies). Those encrypted values will be decrypted into the original values for Keycloak to show on UI or return in API responses.
 4. Navigate to the table `USER_ATTRIBUTE`. Verify that the column `VALUE` for the rows corresponding to user attributes that have the encryption enabled contains a 40-characters of hexadecimal hash value, similar to the columns in `USER_ENTITY` table.
-5. Navigate to the table `USER_ATTRIBUTE_ENCRYPTED` to find the corresponding `VALUE` column contains the Base-64 encrypted strings, similar to the column in `USER_ENTITY_ENCRYPTED` table. 
+5. Navigate to the table `USER_ATTRIBUTE_ENCRYPTED` to find the corresponding `VALUE` column contains the Base-64 encrypted strings, similar to the columns in `USER_ENTITY_ENCRYPTED` table. 
 
 ## Known issues/limitations
 
-1. [Unmanaged attributes](https://www.keycloak.org/docs/latest/server_admin/#_understanding-managed-and-unmanaged-attributes) are not supported.
-2. Encrypted attributes can only be searched using exact matches. Fuzzy-search is no longer possible for them.
-3. If the encrypted values in the database cannot be decrypted for whatever reason, the hash value of the fields/attributes will be displayed as-is to the users and clients. This may cause confusions.
-4. If the `pii-data-encryption` validator is added to an existing attribute, the encryption is only applied to existing user attributes either when they are updated by the users, or if you switch the `Enable encryption` switch inside `User Entity Encryption` tab off and then on again.
-
+1. Requires Keycloak version 24.x and above.
+2. [Unmanaged attributes](https://www.keycloak.org/docs/latest/server_admin/#_understanding-managed-and-unmanaged-attributes) are not supported.
+3. Encrypted attributes can only be searched using exact matches. Fuzzy-search is no longer possible for them.
+4. If the encrypted values in the database cannot be decrypted for whatever reason, the hash value of the fields/attributes will be displayed as-is to the users and clients. This may cause confusions.
+5. If the `pii-data-encryption` validator is added to an existing attribute, the encryption is only applied to existing user attributes either when they are updated by the users, or if you switch the `Enable encryption` switch inside `User Entity Encryption` tab off and then on again.

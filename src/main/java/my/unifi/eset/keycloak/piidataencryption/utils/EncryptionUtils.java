@@ -1,4 +1,4 @@
-package my.unifi.eset.keycloak.piidataencryption;
+package my.unifi.eset.keycloak.piidataencryption.utils;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;

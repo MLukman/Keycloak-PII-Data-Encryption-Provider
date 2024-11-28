@@ -1,9 +1,10 @@
-package my.unifi.eset.keycloak.piidataencryption;
+package my.unifi.eset.keycloak.piidataencryption.utils;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.Query;
 import java.util.List;
+import my.unifi.eset.keycloak.piidataencryption.admin.PiiDataEncryptionValidatorProvider;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserAttributeEntity;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserEntity;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserProvider;

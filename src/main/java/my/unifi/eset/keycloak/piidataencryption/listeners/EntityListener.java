@@ -1,5 +1,7 @@
-package my.unifi.eset.keycloak.piidataencryption;
+package my.unifi.eset.keycloak.piidataencryption.listeners;
 
+import my.unifi.eset.keycloak.piidataencryption.utils.EncryptionUtils;
+import my.unifi.eset.keycloak.piidataencryption.utils.LogicUtils;
 import jakarta.persistence.EntityManager;
 import java.util.HashMap;
 import java.util.Map;

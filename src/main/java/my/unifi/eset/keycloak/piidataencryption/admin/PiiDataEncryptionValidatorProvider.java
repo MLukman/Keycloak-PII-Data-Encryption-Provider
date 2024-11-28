@@ -1,5 +1,6 @@
-package my.unifi.eset.keycloak.piidataencryption;
+package my.unifi.eset.keycloak.piidataencryption.admin;
 
+import my.unifi.eset.keycloak.piidataencryption.utils.LogicUtils;
 import java.util.List;
 import org.keycloak.component.ComponentValidationException;
 import org.keycloak.models.KeycloakSession;
