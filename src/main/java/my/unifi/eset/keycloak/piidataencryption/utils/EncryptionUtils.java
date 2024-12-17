@@ -1,5 +1,6 @@
 package my.unifi.eset.keycloak.piidataencryption.utils;
 
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -107,17 +108,39 @@ public final class EncryptionUtils {
     }
 
     static synchronized SecretKey getEncryptionKey() throws NoSuchAlgorithmException {
-        if (key == null) {
-            String rawkey = System.getenv("KC_PII_ENCKEY");
-            if (rawkey == null || rawkey.isBlank()) {
-                MessageDigest md = MessageDigest.getInstance("MD5");
-                md.update(System.getenv("KC_DB_URL").getBytes());
-                rawkey = HexFormat.of().formatHex(md.digest()).toLowerCase();
-                Logger.getLogger(EncryptionUtils.class).warnf("Encryption key generated using MD5 hash of KC_DB_URL envvar is %s. It is recommended to set this key as KC_PII_ENCKEY envvar.", rawkey);
-            }
-            key = new SecretKeySpec(rawkey.getBytes(), "AES");
+        if(key != null){
+            return key;
         }
+
+        String rawkey = System.getenv("KC_PII_ENCKEY");
+        if (rawkey == null || rawkey.isBlank()) {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(System.getenv("KC_DB_URL").getBytes());
+            rawkey = HexFormat.of().formatHex(md.digest()).toLowerCase();
+            Logger.getLogger(EncryptionUtils.class).warn("Encryption key generated using MD5 hash of KC_DB_URL. It is recommended to set this key as KC_PII_ENCKEY envvar.");
+        }
+
+        SecretKeySpec genKey = new SecretKeySpec(rawkey.getBytes(), "AES");
+        try {
+            validateKey(genKey);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        }
+
+        key = genKey;
+
         return key;
+    }
+
+    public static void validateKey(SecretKeySpec candidateKey) {
+        try {
+            Cipher cipher = Cipher.getInstance(algorithm);
+            cipher.init(Cipher.ENCRYPT_MODE, candidateKey, new IvParameterSpec(new byte[16]));
+            // Trivial encryption to validate
+            cipher.doFinal("test".getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid encryption key for algorithm " + algorithm, e);
+        }
     }
 
     private EncryptionUtils() {

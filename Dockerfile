@@ -8,7 +8,7 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn verify --fail-never -Dkeycloak.version=$KEYCLOAK_VERSION
 COPY src ./src
-RUN mvn package -o -Dkeycloak.version=$KEYCLOAK_VERSION
+RUN mvn package -Dkeycloak.version=$KEYCLOAK_VERSION
 
 ### Build customized Keycloak
 
