@@ -15,7 +15,7 @@
         </createTable>
     </changeSet>
     <changeSet author="mlukman" id="20241104-2">
-        <createIndex associatedWith="" indexName="USER_ID_FK" tableName="USER_ENTITY_ENCRYPTED">
+        <createIndex associatedWith="" indexName="USER_ENTITY_USER_ID_IDX" tableName="USER_ENTITY_ENCRYPTED">
             <column name="USER_ID"/>
         </createIndex>
     </changeSet>
@@ -36,7 +36,7 @@
         </createTable>
     </changeSet>
     <changeSet author="mlukman" id="20241107-2">
-        <createIndex associatedWith="" indexName="USER_ID_FK" tableName="USER_ATTRIBUTE_ENCRYPTED">
+        <createIndex associatedWith="" indexName="USER_ATTRIBUTE_USER_ID_IDX" tableName="USER_ATTRIBUTE_ENCRYPTED">
             <column name="USER_ID"/>
         </createIndex>
     </changeSet>
