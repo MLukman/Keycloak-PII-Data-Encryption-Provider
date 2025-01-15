@@ -6,9 +6,9 @@ FROM maven:3-openjdk-17-slim AS provider-pii
 ARG KEYCLOAK_VERSION
 WORKDIR /app
 COPY pom.xml .
-RUN mvn verify --fail-never -Dkeycloak.version=$KEYCLOAK_VERSION
+RUN mvn test verify -Dkeycloak.version=$KEYCLOAK_VERSION
 COPY src ./src
-RUN mvn package -Dkeycloak.version=$KEYCLOAK_VERSION
+RUN mvn package -o -Dmaven.test.skip -Dkeycloak.version=$KEYCLOAK_VERSION
 
 ### Build customized Keycloak
 

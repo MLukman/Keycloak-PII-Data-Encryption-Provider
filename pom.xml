@@ -39,6 +39,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.2</version>
                 <configuration>
                     <!-- Tells the JVM when running tests to open java.util for reflection by unnamed modules. Required by system-stubs-jupiter -->
                     <argLine>--add-opens java.base/java.util=ALL-UNNAMED</argLine>
