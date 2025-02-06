@@ -111,10 +111,16 @@ public final class LogicUtils {
         eue.setFirstName(EncryptionUtils.encryptValue(ue.getFirstName()));
         eue.setLastName(EncryptionUtils.encryptValue(ue.getLastName()));
         em.persist(eue);
-        Query update = em.createQuery("UPDATE UserEntity u SET u.username = :username, u.email = :email, u.firstName = :firstName, u.lastName = :lastName WHERE u.id = :id");
+        Query update = em.createQuery("UPDATE UserEntity u SET u.username = :username, u.email = :email, u.emailConstraint = :emailConstraint, u.firstName = :firstName, u.lastName = :lastName WHERE u.id = :id");
         update.setParameter("id", ue.getId());
         update.setParameter("username", LogicUtils.hash(ue.getUsername()));
-        update.setParameter("email", LogicUtils.hash(ue.getEmail()));
+        String emailHash = LogicUtils.hash(ue.getEmail());
+        update.setParameter("email", emailHash);
+        if (!ks.realms().getRealm(ue.getRealmId()).isDuplicateEmailsAllowed()) {
+            update.setParameter("emailConstraint", emailHash);
+        } else {
+            update.setParameter("emailConstraint", ue.getEmailConstraint());
+        }
         update.setParameter("firstName", LogicUtils.hash(ue.getFirstName()));
         update.setParameter("lastName", LogicUtils.hash(ue.getLastName()));
         update.executeUpdate();
@@ -138,16 +144,22 @@ public final class LogicUtils {
         }
     }
 
-    public static void decryptExistingUserEntities(EntityManager em, String realmId) {
-        List<UserEntity> realmUsers = em.createQuery("SELECT u FROM UserEntity u WHERE u.realmId = :realmId", UserEntity.class).setParameter("realmId", realmId).getResultList();
+    public static void decryptExistingUserEntities(EntityManager em, RealmModel realm) {
+        List<UserEntity> realmUsers = em.createQuery("SELECT u FROM UserEntity u WHERE u.realmId = :realmId", UserEntity.class).setParameter("realmId", realm.getId()).getResultList();
         for (UserEntity user : realmUsers) {
             EncryptedUserEntity eue;
             eue = LogicUtils.getEncryptedUserEntity(em, user, false);
             if (eue != null) {
-                Query update = em.createQuery("UPDATE UserEntity u SET u.username = :username, u.email = :email, u.firstName = :firstName, u.lastName = :lastName WHERE u.id = :id");
+                Query update = em.createQuery("UPDATE UserEntity u SET u.username = :username, u.email = :email, u.emailConstraint = :emailConstraint, u.firstName = :firstName, u.lastName = :lastName WHERE u.id = :id");
                 update.setParameter("id", user.getId());
                 update.setParameter("username", EncryptionUtils.decryptValue(eue.getUsername()));
-                update.setParameter("email", EncryptionUtils.decryptValue(eue.getEmail()));
+                String email = EncryptionUtils.decryptValue(eue.getEmail());
+                update.setParameter("email", email);
+                if (!realm.isDuplicateEmailsAllowed()) {
+                    update.setParameter("emailConstraint", email);
+                } else {
+                    update.setParameter("emailConstraint", user.getEmailConstraint());
+                }
                 update.setParameter("firstName", EncryptionUtils.decryptValue(eue.getFirstName()));
                 update.setParameter("lastName", EncryptionUtils.decryptValue(eue.getLastName()));
                 update.executeUpdate();

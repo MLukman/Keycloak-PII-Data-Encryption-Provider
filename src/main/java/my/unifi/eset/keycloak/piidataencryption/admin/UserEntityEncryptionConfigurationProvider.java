@@ -108,7 +108,7 @@ public class UserEntityEncryptionConfigurationProvider implements UiTabProvider,
         if (!toEncrypt) {
             EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
             em.setFlushMode(FlushModeType.COMMIT);
-            LogicUtils.decryptExistingUserEntities(em, realm.getId());
+            LogicUtils.decryptExistingUserEntities(em, realm);
             em.flush();
         }
     }
