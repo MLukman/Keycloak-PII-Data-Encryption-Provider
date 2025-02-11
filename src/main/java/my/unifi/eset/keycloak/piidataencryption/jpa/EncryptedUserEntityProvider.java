@@ -9,7 +9,7 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 
 /**
- * Apply the Liquibase changelog that contains the database table definition for
+ * Applies the Liquibase changelog that contains the database table definition for
  * USER_ENTITY_ENCRYPTED and register the corresponding entity class.
  */
 public class EncryptedUserEntityProvider implements JpaEntityProviderFactory, JpaEntityProvider {

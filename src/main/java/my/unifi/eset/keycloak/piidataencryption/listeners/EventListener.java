@@ -17,6 +17,13 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.jpa.entities.UserAttributeEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
 
+/**
+ * Listens to REGISTER & UPDATE_PROFILE user events as well as CREATE & UPDATE
+ * admin event on USER resource to perform encryption of UserEntity &
+ * UserAttributeEntity
+ *
+ * @author MLukman (https://github.com/MLukman)
+ */
 public class EventListener implements EventListenerProvider {
 
     private final KeycloakSession session;
@@ -25,17 +32,25 @@ public class EventListener implements EventListenerProvider {
         this.session = session;
     }
 
+    /**
+     * Intercept REGISTER & UPDATE_PROFILE user events
+     *
+     * @param event
+     */
     @Override
     public void onEvent(Event event) {
-        if (event.getType() != EventType.REGISTER && event.getType() != EventType.UPDATE_PROFILE) {
-            // non-relevant event
-            return;
+        if (event.getType() == EventType.REGISTER || event.getType() == EventType.UPDATE_PROFILE) {
+            UserModel user = session.users().getUserById(session.realms().getRealm(event.getRealmId()), event.getUserId());
+            encryptUserWithId(user.getId());
         }
-
-        UserModel user = session.users().getUserById(session.realms().getRealm(event.getRealmId()), event.getUserId());
-        encryptUserWithId(user.getId());
     }
 
+    /**
+     * Intercept UPDATE admin event on USER resource
+     *
+     * @param ae
+     * @param bln
+     */
     @Override
     public void onEvent(AdminEvent ae, boolean bln) {
         if (ae.getResourceType() == ResourceType.USER) {

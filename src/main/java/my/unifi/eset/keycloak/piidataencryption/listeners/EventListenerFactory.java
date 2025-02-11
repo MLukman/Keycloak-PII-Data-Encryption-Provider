@@ -6,6 +6,12 @@ import org.keycloak.events.EventListenerProviderFactory;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.KeycloakSessionFactory;
 
+/**
+ * Registers event listener pii-data-encryption to be in the event listeners 
+ * drop-down in the realm settings
+ * 
+ * @author MLukman (https://github.com/MLukman)
+ */
 public class EventListenerFactory implements EventListenerProviderFactory {
 
     public static final String ID = "pii-data-encryption";

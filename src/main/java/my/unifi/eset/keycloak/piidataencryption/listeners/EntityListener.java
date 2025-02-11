@@ -7,13 +7,12 @@ import java.util.HashMap;
 import java.util.Map;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserAttributeEntity;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserEntity;
+import my.unifi.eset.keycloak.piidataencryption.utils.DecryptionFailureException;
 import org.hibernate.boot.Metadata;
 import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.event.service.spi.EventListenerRegistry;
 import org.hibernate.event.spi.EventType;
-import org.hibernate.event.spi.PostLoadEvent;
-import org.hibernate.event.spi.PostLoadEventListener;
 import org.hibernate.event.spi.PreLoadEvent;
 import org.hibernate.event.spi.PreLoadEventListener;
 import org.hibernate.integrator.spi.Integrator;
@@ -23,21 +22,19 @@ import org.keycloak.models.jpa.entities.UserAttributeEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
 
 /**
- * Listen to PrePersist, PreUpdate & PostLoad entity events and perform
- * encryption and decryption if entity is UserAttributeEntity
+ * Listens to PreLoad entity event to perform decryption of UserEntity &
+ * UserAttributeEntity
  *
  * @author MLukman (https://github.com/MLukman)
  */
-public class EntityListener implements Integrator, PreLoadEventListener, PostLoadEventListener {
+public class EntityListener implements Integrator, PreLoadEventListener {
 
     static final Logger logger = Logger.getLogger(EntityListener.class);
 
     @Override
     public void integrate(Metadata metadata, BootstrapContext bootstrapContext, SessionFactoryImplementor sessionFactory) {
-        EventListenerRegistry eventListenerRegistry = sessionFactory.getServiceRegistry()
-                .getService(EventListenerRegistry.class);
+        EventListenerRegistry eventListenerRegistry = sessionFactory.getServiceRegistry().getService(EventListenerRegistry.class);
         eventListenerRegistry.appendListeners(EventType.PRE_LOAD, this);
-        eventListenerRegistry.appendListeners(EventType.POST_LOAD, this);
     }
 
     @Override
@@ -46,46 +43,76 @@ public class EntityListener implements Integrator, PreLoadEventListener, PostLoa
 
     @Override
     public void onPreLoad(PreLoadEvent ple) {
-        EntityManager em = ple.getSession().getSessionFactory().createEntityManager();
-        EncryptedUserEntity eue;
-        if (ple.getEntity() instanceof UserEntity ue && null != (eue = LogicUtils.getEncryptedUserEntity(em, ue, false))) {
-            String[] props = ple.getPersister().getEntityMetamodel().getPropertyNames();
-            Object[] states = ple.getState();
-            for (int i = 0; i < props.length; i++) {
-                switch (props[i]) {
-                    case "username" ->
-                        states[i] = EncryptionUtils.decryptValue(eue.getUsername());
-                    case "email" ->
-                        states[i] = EncryptionUtils.decryptValue(eue.getEmail());
-                    case "firstName" ->
-                        states[i] = EncryptionUtils.decryptValue(eue.getFirstName());
-                    case "lastName" ->
-                        states[i] = EncryptionUtils.decryptValue(eue.getLastName());
-                }
+        try {
+            if (ple.getEntity() instanceof UserEntity ue) {
+                handlePreLoadEventUserEntity(ple, ue);
             }
+            if (ple.getEntity() instanceof UserAttributeEntity uae) {
+                handlePreLoadEventUserAttributeEntity(ple, uae);
+            }
+        } catch (DecryptionFailureException ex) {
+            // suppress because log warn is already outputed
         }
-        if (ple.getEntity() instanceof UserAttributeEntity uae) {
-            Map<String, Integer> cols = new HashMap<>(Map.of("user", -1, "name", -1, "value", -1));
-            String[] propertyNames = ple.getPersister().getEntityMetamodel().getPropertyNames();
+    }
+
+    protected void handlePreLoadEventUserEntity(PreLoadEvent ple, UserEntity ue) {
+        EntityManager em = ple.getSession().getSessionFactory().createEntityManager();
+        EncryptedUserEntity eue = LogicUtils.getEncryptedUserEntity(em, ue, false);
+        if (eue != null) {
             Object[] states = ple.getState();
-            for (int i = 0; i < propertyNames.length; i++) {
-                if (cols.containsKey(propertyNames[i])) {
-                    cols.put(propertyNames[i], i);
-                }
-            }
-            EncryptedUserAttributeEntity euae = LogicUtils.getEncryptedUserAttributeEntity(em, (UserEntity) states[cols.get("user")], String.valueOf(states[cols.get("name")]), false);
-            if (euae != null) {
-                states[cols.get("value")] = EncryptionUtils.decryptValue(euae.getValue());
-            } else if (EncryptionUtils.isEncryptedValue(String.valueOf(states[cols.get("value")]))) {
-                states[cols.get("value")] = EncryptionUtils.decryptValue(String.valueOf(states[cols.get("value")]));
+            Map<String, Integer> cols = collectColumnIndices(ple.getPersister().getEntityMetamodel().getPropertyNames());
+            if (validateHashValueVsEncryptedValue((String) states[cols.get("username")], eue.getUsername())) {
+                logger.debugf("Event: USER_DECRYPTION, Realm: %s, User: %s", states[cols.get("realmId")], ue.getId());
+                states[cols.get("username")] = EncryptionUtils.decryptValue(eue.getUsername());
+                states[cols.get("email")] = EncryptionUtils.decryptValue(eue.getEmail());
+                states[cols.get("firstName")] = EncryptionUtils.decryptValue(eue.getFirstName());
+                states[cols.get("lastName")] = EncryptionUtils.decryptValue(eue.getLastName());
+            } else {
+                throw new DecryptionFailureException((String) states[cols.get("realmId")], ue.getId());
             }
         }
     }
 
-    @Override
-    public void onPostLoad(PostLoadEvent ple) {
-        if (ple.getEntity() instanceof UserAttributeEntity uae && EncryptionUtils.isEncryptedValue(uae.getValue())) {
-            logger.warnf("Event: ATTRIBUTE_DECRYPTION_FAILURE, Realm: %s, User: %s, Attribute: %s", uae.getUser().getRealmId(), uae.getUser().getUsername(), uae.getName());
+    protected void handlePreLoadEventUserAttributeEntity(PreLoadEvent ple, UserAttributeEntity uae) {
+        EntityManager em = ple.getSession().getSessionFactory().createEntityManager();
+        Map<String, Integer> cols = collectColumnIndices(ple.getPersister().getEntityMetamodel().getPropertyNames());
+        Object[] states = ple.getState();
+        if (states[cols.get("value")] == null) {
+            return; // null value = do nothing
+        }
+        UserEntity user = (UserEntity) states[cols.get("user")];
+        EncryptedUserAttributeEntity euae = LogicUtils.getEncryptedUserAttributeEntity(em, user, String.valueOf(states[cols.get("name")]), false);
+        if (euae != null) {
+            // if record exist, decrypt it and set as value column
+            if (validateHashValueVsEncryptedValue((String) states[cols.get("value")], euae.getValue())) {
+                logger.debugf("Event: USER_ATTRIBUTE_DECRYPTION, Realm: %s, User: %s, Attribute: %s", user.getRealmId(), user.getId(), states[cols.get("name")]);
+                states[cols.get("value")] = EncryptionUtils.decryptValue(euae.getValue());
+            } else {
+                throw new DecryptionFailureException(user.getRealmId(), user.getId(), (String) states[cols.get("name")]);
+            }
+        } else if (EncryptionUtils.isEncryptedValue(String.valueOf(states[cols.get("value")]))) {
+            // if the value column is encrypted value (backward compatibility with version 1.x)
+            states[cols.get("value")] = EncryptionUtils.decryptValue(String.valueOf(states[cols.get("value")]));
         }
     }
+
+    protected static Map<String, Integer> collectColumnIndices(String[] columnNames) {
+        Map<String, Integer> cols = new HashMap<>();
+        for (int i = 0; i < columnNames.length; i++) {
+            cols.put(columnNames[i], i);
+        }
+        return cols;
+    }
+
+    /**
+     * Validate if the passed hash value matches with the pass encrypted value
+     *
+     * @param hash The hash value String
+     * @param encryptedValue The encrypted value String
+     * @return True if matches, false otherwise
+     */
+    public static boolean validateHashValueVsEncryptedValue(String hash, String encryptedValue) {
+        return hash.equalsIgnoreCase(LogicUtils.hash(EncryptionUtils.decryptValue(encryptedValue)));
+    }
+
 }

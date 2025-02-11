@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import my.unifi.eset.keycloak.piidataencryption.listeners.EventListenerFactory;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserProvider;
+import my.unifi.eset.keycloak.piidataencryption.utils.EncryptionUtils;
 import org.keycloak.Config;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.component.ComponentValidationException;
@@ -78,6 +79,11 @@ public class UserEntityEncryptionConfigurationProvider implements UiTabProvider,
         if (model.get("enable", false) && !(providerActive && eventListenerActive)) {
             throw new ComponentValidationException("\nUser entity encryption cannot be enabled until \n(1) EncryptedUserProvider is enabled using --spi-user-provider=jpa-encrypted build/start flag \n(2) pii-data-encryption' event listener is added to the realm events setting");
         }
+        try {
+            EncryptionUtils.encryptValue("test");
+        } catch (IllegalArgumentException ex) {
+            throw new ComponentValidationException("\nEncryption does not work due to the following error: " + ex.getMessage());
+        }
     }
 
     @Override
@@ -99,7 +105,7 @@ public class UserEntityEncryptionConfigurationProvider implements UiTabProvider,
             if (toEncrypt) {
                 EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
                 em.setFlushMode(FlushModeType.COMMIT);
-                LogicUtils.encryptExistingUserEntities(session, em, realm.getId());
+                LogicUtils.encryptExistingUserEntities(session, em, realm);
                 em.flush();
             }
         } else {

@@ -3,16 +3,17 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>my.unifi.eset</groupId>
     <artifactId>keycloak-pii-data-encryption</artifactId>
-    <version>2.1</version>
+    <version>2.2</version>
     <packaging>jar</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <keycloak.version>25.0.1</keycloak.version>
+        <keycloak.version>24.0.0</keycloak.version>
         <netbeans.hint.jdkPlatform>JDK_17</netbeans.hint.jdkPlatform>
         <junit.jupiter.version>5.9.2</junit.jupiter.version>
+        <surefire.version>3.5.2</surefire.version>
     </properties>
     <dependencies>
         <dependency>
@@ -24,13 +25,13 @@
         <dependency>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
-            <version>3.5.2</version>
+            <version>${surefire.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.surefire</groupId>
             <artifactId>surefire-junit-platform</artifactId>
-            <version>3.5.2</version>
+            <version>${surefire.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -51,7 +52,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
+                <version>${surefire.version}</version>
                 <configuration>
                     <!-- Tells the JVM when running tests to open java.util for reflection by unnamed modules. Required by system-stubs-jupiter -->
                     <argLine>--add-opens java.base/java.util=ALL-UNNAMED</argLine>

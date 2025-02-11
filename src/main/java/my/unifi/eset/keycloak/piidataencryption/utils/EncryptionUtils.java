@@ -19,7 +19,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.jboss.logging.Logger;
 
 /**
- * Provide encryption functionalities.
+ * Provides encryption functionalities.
  *
  * @author MLukman (https://github.com/MLukman)
  */
@@ -39,7 +39,7 @@ public final class EncryptionUtils {
     static SecretKeySpec key = null;
 
     /**
-     * Encrypt the passed String value.
+     * Encrypts the passed String value.
      *
      * @param value String to encrypt
      * @return The encrypted value
@@ -51,10 +51,8 @@ public final class EncryptionUtils {
             }
             byte[] iv = new byte[16];
             new SecureRandom().nextBytes(iv);
-
             Cipher cipher = Cipher.getInstance(algorithm);
-            SecretKey key = getEncryptionKey();
-            cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
+            cipher.init(Cipher.ENCRYPT_MODE, getEncryptionKey(), new IvParameterSpec(iv));
             byte[] cipherText = cipher.doFinal(value.getBytes());
             return CIPHERTEXT_PREFIX + Base64.getEncoder().encodeToString(ArrayUtils.addAll(iv, cipherText));
         } catch (NoSuchAlgorithmException
@@ -68,7 +66,7 @@ public final class EncryptionUtils {
     }
 
     /**
-     * Decrypt the passed value.
+     * Decrypts the passed value.
      *
      * @param value String to decrypt
      * @return The decrypted value
@@ -82,8 +80,7 @@ public final class EncryptionUtils {
             byte[] iv = ArrayUtils.subarray(cipherTextWithIv, 0, 16);
             byte[] cipherText = ArrayUtils.subarray(cipherTextWithIv, 16, cipherTextWithIv.length);
             Cipher cipher = Cipher.getInstance(algorithm);
-            SecretKey key = getEncryptionKey();
-            cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv));
+            cipher.init(Cipher.DECRYPT_MODE, getEncryptionKey(), new IvParameterSpec(iv));
             byte[] plainText = cipher.doFinal(cipherText);
             return new String(plainText);
         } catch (NoSuchAlgorithmException
@@ -98,7 +95,7 @@ public final class EncryptionUtils {
     }
 
     /**
-     * Check if the passed value is encrypted.
+     * Checks if the passed value is encrypted.
      *
      * @param value String to check whether encrypted or not
      * @return true if encrypted value, false otherwise.
@@ -107,8 +104,15 @@ public final class EncryptionUtils {
         return value != null && value.startsWith(CIPHERTEXT_PREFIX);
     }
 
+    /**
+     * Gets encryption key from KC_PII_ENCKEY envvar, or generate one from
+     * KC_DB_URL envvar.
+     *
+     * @return SecretKey
+     * @throws NoSuchAlgorithmException
+     */
     static synchronized SecretKey getEncryptionKey() throws NoSuchAlgorithmException {
-        if(key != null){
+        if (key != null) {
             return key;
         }
 
@@ -127,22 +131,26 @@ public final class EncryptionUtils {
             throw e;
         }
 
-        key = genKey;
-
-        return key;
+        return key = genKey;
     }
 
+    /**
+     * Validates if the provided SecretKeySpec is a valid key.
+     *
+     * @param candidateKey SecretKeySpec
+     */
     public static void validateKey(SecretKeySpec candidateKey) {
         try {
             Cipher cipher = Cipher.getInstance(algorithm);
             cipher.init(Cipher.ENCRYPT_MODE, candidateKey, new IvParameterSpec(new byte[16]));
             // Trivial encryption to validate
             cipher.doFinal("test".getBytes(StandardCharsets.UTF_8));
-        } catch (Exception e) {
+        } catch (InvalidAlgorithmParameterException | InvalidKeyException | NoSuchAlgorithmException | BadPaddingException | IllegalBlockSizeException | NoSuchPaddingException e) {
             throw new IllegalArgumentException("Invalid encryption key for algorithm " + algorithm, e);
         }
     }
 
+    // Makes this class un-instantiatable
     private EncryptionUtils() {
     }
 

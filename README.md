@@ -1,13 +1,10 @@
 # Keycloak PII Data Encryption Provider
-[![Sponsor MLukman](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/MLukman)
-
-> News: **Version 2 is here!** Now this provider also encrypts the common user attributes `username`, `email`, `firstName` and `lastName`. It also preserves the ability to search by the encrypted fields, albeit only exact match search is possible.
 
 ## Introduction
 
-This provider encrypts user attribute values before storing them to the database and decrypt them upon loading from the database. This is to address data security regulations such as GDPR that require any PII data to not be stored in plain/raw format at rest.
+This provider encrypts user fields & attribute values before storing them to the database and decrypt them upon loading from the database. This is to address data security regulations such as GDPR that require any PII data to not be stored in plain/raw format at rest.
 
-***Important: this provider requires Keycloak version 24.x and above only.*** 
+***Important: this provider supports Keycloak version 24.x and above only.*** 
 
 ## How to install
 
@@ -20,13 +17,13 @@ git clone https://github.com/MLukman/Keycloak-PII-Data-Encryption-Provider.git K
 cd Keycloak-PII-Data-Encryption-Provider
 ```
 
-Compile this provider into a JAR file using the following command. JDK 17 or above and Maven are required to be pre-installed on the machine.
+Compile this provider into a JAR file using the following command. JDK 17 or above and Maven are required to be pre-installed on the machine. Make sure to match the `keycloak.version` parameter with the version of the target Keycloak.
 
 ```shell 
-mvn clean package
+mvn clean package -Dkeycloak.version=26.1.1
 ```
 
-Copy paste the packaged JAR file from inside `target` folder into Keycloak's `providers` folder. Run `kc.sh build` command to get Keycloak to register this provider.
+Copy paste the packaged JAR file from inside `target` folder into Keycloak `providers` folder. Run `kc.sh build` command to get Keycloak to register this provider.
 
 ### Install inside Docker Image
 
@@ -34,7 +31,7 @@ Use this method if this provider needs to be pre-packaged inside a custom Keyclo
 
 ```dockerfile
 # ARG defined before FROM in multi-staged Dockerfile is shared among the stages
-ARG KEYCLOAK_VERSION=26.0.6
+ARG KEYCLOAK_VERSION=26.1.1
 
 # Build the provider
 FROM maven:3.8.1-openjdk-17-slim AS keycloak-pii-data-encryption
@@ -82,7 +79,7 @@ The encryption needs to be enabled realm-by-realm. Firstly, this provider requir
 
 ### Enabling the encryption
 
-To actually enable the encryption of the common user attributes `username`, `email`, `firstName` and `lastName` for users in a particular realm, go to the `Realm settings` page and navigate to the custom tab `User Entity Encryption`. Turn on the `Enable encryption` switch on that tab, as shown below:
+To actually enable the encryption of the common user attributes `username`, `email`, `first name` and `last name` for users in a particular realm, go to the `Realm settings` page and navigate to the custom tab `User Entity Encryption`. Turn on the `Enable encryption` switch on that tab, as shown below:
 
 ![Screenshot of "User Entity Encryption" tab](screenshot-enable-user-entity-encryption.png)
 
@@ -106,6 +103,16 @@ This provider also automatically encrypts any user attributes that have their na
 
 1. Requires Keycloak version 24.x and above.
 2. [Unmanaged attributes](https://www.keycloak.org/docs/latest/server_admin/#_understanding-managed-and-unmanaged-attributes) are not supported.
-3. Encrypted attributes can only be searched using exact matches. Fuzzy-search is no longer possible for them.
-4. If the encrypted values in the database cannot be decrypted for whatever reason, the hash value of the fields/attributes will be displayed as-is to the users and clients. This may cause confusions.
-5. If the `pii-data-encryption` validator is added to an existing attribute, the encryption is only applied to existing user attributes either when they are updated by the users, or if you switch the `Enable encryption` switch inside `User Entity Encryption` tab off and then on again.
+3. Encrypted user fields/attributes can only be searched using exact matches. Fuzzy-search is no longer possible for them.
+4. If the encrypted values in the database cannot be decrypted for whatever reason, the hashed value of the fields/attributes will be displayed as-is to the users and clients. This may cause confusions.
+5. If the `pii-data-encryption` validator is added to an existing attribute, the encryption is only applied to existing users' attribute data either when they are updated by the users, or if you switch the `Enable encryption` switch inside `User Entity Encryption` tab off and then on again.
+
+## Your contributions will be very much appreciated
+
+### Issues
+
+Please use the GitHub issues to report any issues you encounter when using this provider.
+
+### Donation
+
+Should you benefit from this Keycloak provider, I'd appreciate if you can buy me a coffee by clicking this button >>> [![Sponsor MLukman](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86&logoSize=auto)](https://github.com/sponsors/MLukman)
