@@ -39,6 +39,9 @@ public class EventListener implements EventListenerProvider {
      */
     @Override
     public void onEvent(Event event) {
+        if (!LogicUtils.isUserEncryptionEnabled(session, event.getRealmId())) {
+            return;
+        }
         if (event.getType() == EventType.REGISTER || event.getType() == EventType.UPDATE_PROFILE) {
             UserModel user = session.users().getUserById(session.realms().getRealm(event.getRealmId()), event.getUserId());
             encryptUserWithId(user.getId());
@@ -53,6 +56,9 @@ public class EventListener implements EventListenerProvider {
      */
     @Override
     public void onEvent(AdminEvent ae, boolean bln) {
+        if (!LogicUtils.isUserEncryptionEnabled(session, ae.getRealmId())) {
+            return;
+        }
         if (ae.getResourceType() == ResourceType.USER) {
             if (ae.getOperationType() == OperationType.CREATE) {
                 try {

@@ -51,4 +51,7 @@
     <changeSet author="mlukman" id="20241107-5">
         <addForeignKeyConstraint baseColumnNames="USER_ATTRIBUTE_ID" baseTableName="USER_ATTRIBUTE_ENCRYPTED" constraintName="USER_ATTRIBUTE_ENCRYPTED_FK_USER_ATTRIBUTE_ID" deferrable="false" initiallyDeferred="false" onDelete="CASCADE" onUpdate="CASCADE" referencedColumnNames="ID" referencedTableName="USER_ATTRIBUTE" validate="true"/>
     </changeSet>
+    <changeSet author="mlukman" id="20250213-1">
+        <modifyDataType tableName="USER_ATTRIBUTE_ENCRYPTED" columnName="VALUE" newDataType="NCLOB"/>
+    </changeSet>
 </databaseChangeLog>

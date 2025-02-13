@@ -16,6 +16,7 @@ import org.keycloak.models.jpa.entities.UserAttributeEntity;
 import org.keycloak.models.jpa.entities.UserEntity;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.representations.userprofile.config.UPAttribute;
+import org.keycloak.storage.jpa.JpaHashUtils;
 import org.keycloak.userprofile.DeclarativeUserProfileProvider;
 import org.keycloak.userprofile.UserProfileProvider;
 
@@ -65,16 +66,20 @@ public final class LogicUtils {
      * Checks if a particular user attribute should be encrypted or not
      *
      * @param ks KeycloakSession
-     * @param name The name of the user attribute
+     * @param realmId The ID of the realm
+     * @param attributeName The name of the user attribute
      * @return true if should encrypted, false if not
      */
-    public static boolean shouldEncryptAttribute(KeycloakSession ks, String name) {
-        if (name.startsWith("pii-")) {
+    public static boolean shouldEncryptAttribute(KeycloakSession ks, String realmId, String attributeName) {
+        if (!isUserEncryptionEnabled(ks, realmId)) {
+            return false;
+        }
+        if (attributeName.startsWith("pii-")) {
             return true;
         }
         UserProfileProvider upp = ks.getProvider(UserProfileProvider.class);
         if (upp instanceof DeclarativeUserProfileProvider dup) {
-            UPAttribute upa = dup.getConfiguration().getAttribute(name);
+            UPAttribute upa = dup.getConfiguration().getAttribute(attributeName);
             if (upa != null && upa.getValidations().containsKey(PiiDataEncryptionValidatorProvider.ID)) {
                 return Boolean.parseBoolean(String.valueOf(upa.getValidations().get(PiiDataEncryptionValidatorProvider.ID).getOrDefault("enable", false)));
             }
@@ -90,7 +95,7 @@ public final class LogicUtils {
      * @return true if should encrypted, false if not
      */
     public static boolean shouldEncryptAttribute(KeycloakSession ks, UserAttributeEntity userAttributeEntity) {
-        return shouldEncryptAttribute(ks, userAttributeEntity.getName());
+        return shouldEncryptAttribute(ks, userAttributeEntity.getUser().getRealmId(), userAttributeEntity.getName());
     }
 
     /**
@@ -184,6 +189,9 @@ public final class LogicUtils {
      * @param ue The UserEntity to encrypt
      */
     public static void encryptUserEntity(KeycloakSession ks, EntityManager em, UserEntity ue) {
+        if (!LogicUtils.isUserEncryptionEnabled(ks, ue.getRealmId())) {
+            return;
+        }
         EncryptedUserEntity eue = LogicUtils.getEncryptedUserEntity(em, ue, true);
         if (ue.getUsername().length() == 40 && ue.getUsername().matches("^[0-9a-fA-F]+$")) {
             // somehow the value is already hashed so we skip it to avoid double hash/encrypt
@@ -228,10 +236,19 @@ public final class LogicUtils {
             euae.setValue(EncryptionUtils.encryptValue(value));
             euae.setAttribute(uae);
             em.persist(euae);
-            Query update = em.createQuery("UPDATE UserAttributeEntity u SET u.value = :value WHERE u.id = :id");
-            update.setParameter("id", uae.getId());
-            update.setParameter("value", hash(value));
-            update.executeUpdate();
+            if (value.length() > 255) {
+                Query update = em.createQuery("UPDATE UserAttributeEntity u SET u.value = null, u.longValue = :longValue, u.longValueHash = :longValueHash, u.longValueHashLowerCase = :longValueHashLowerCase WHERE u.id = :id");
+                update.setParameter("id", uae.getId());
+                update.setParameter("longValue", hash(value));
+                update.setParameter("longValueHash", JpaHashUtils.hashForAttributeValue(value));
+                update.setParameter("longValueHashLowerCase", JpaHashUtils.hashForAttributeValueLowerCase(value));
+                update.executeUpdate();
+            } else {
+                Query update = em.createQuery("UPDATE UserAttributeEntity u SET u.value = :value, u.longValue = null, u.longValueHash = null, u.longValueHashLowerCase = null WHERE u.id = :id");
+                update.setParameter("id", uae.getId());
+                update.setParameter("value", hash(value));
+                update.executeUpdate();
+            }
         }
     }
 
@@ -299,10 +316,20 @@ public final class LogicUtils {
         if (!uae.getValue().equalsIgnoreCase(EncryptionUtils.decryptValue(euae.getValue()))) {
             throw new DecryptionFailureException(realm.getId(), euae.getUser().getId(), euae.getName());
         }
-        Query update = em.createQuery("UPDATE UserAttributeEntity u SET u.value = :value WHERE u = :attribute");
-        update.setParameter("attribute", uae);
-        update.setParameter("value", EncryptionUtils.decryptValue(euae.getValue()));
-        update.executeUpdate();
+        String value = EncryptionUtils.decryptValue(euae.getValue());
+        if (value.length() > 255) {
+            Query update = em.createQuery("UPDATE UserAttributeEntity u SET u.value = null, u.longValue = :longValue, u.longValueHash = :longValueHash, u.longValueHashLowerCase = :longValueHashLowerCase WHERE u.id = :id");
+            update.setParameter("id", uae.getId());
+            update.setParameter("longValue", value);
+            update.setParameter("longValueHash", JpaHashUtils.hashForAttributeValue(value));
+            update.setParameter("longValueHashLowerCase", JpaHashUtils.hashForAttributeValueLowerCase(value));
+            update.executeUpdate();
+        } else {
+            Query update = em.createQuery("UPDATE UserAttributeEntity u SET u.value = :value, u.longValue = null, u.longValueHash = null, u.longValueHashLowerCase = null WHERE u.id = :id");
+            update.setParameter("id", uae.getId());
+            update.setParameter("value", value);
+            update.executeUpdate();
+        }
         em.remove(euae);
     }
 

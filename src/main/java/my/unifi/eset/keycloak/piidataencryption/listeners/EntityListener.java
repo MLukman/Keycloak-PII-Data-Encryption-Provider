@@ -77,16 +77,21 @@ public class EntityListener implements Integrator, PreLoadEventListener {
         EntityManager em = ple.getSession().getSessionFactory().createEntityManager();
         Map<String, Integer> cols = collectColumnIndices(ple.getPersister().getEntityMetamodel().getPropertyNames());
         Object[] states = ple.getState();
-        if (states[cols.get("value")] == null) {
+        String valueColumn;
+        if (states[cols.get("value")] != null) {
+            valueColumn = "value";
+        } else if (states[cols.get("longValue")] != null) {
+            valueColumn = "longValue";
+        } else {
             return; // null value = do nothing
         }
         UserEntity user = (UserEntity) states[cols.get("user")];
         EncryptedUserAttributeEntity euae = LogicUtils.getEncryptedUserAttributeEntity(em, user, String.valueOf(states[cols.get("name")]), false);
         if (euae != null) {
             // if record exist, decrypt it and set as value column
-            if (validateHashValueVsEncryptedValue((String) states[cols.get("value")], euae.getValue())) {
+            if (validateHashValueVsEncryptedValue((String) states[cols.get(valueColumn)], euae.getValue())) {
                 logger.debugf("Event: USER_ATTRIBUTE_DECRYPTION, Realm: %s, User: %s, Attribute: %s", user.getRealmId(), user.getId(), states[cols.get("name")]);
-                states[cols.get("value")] = EncryptionUtils.decryptValue(euae.getValue());
+                states[cols.get(valueColumn)] = EncryptionUtils.decryptValue(euae.getValue());
             } else {
                 throw new DecryptionFailureException(user.getRealmId(), user.getId(), (String) states[cols.get("name")]);
             }

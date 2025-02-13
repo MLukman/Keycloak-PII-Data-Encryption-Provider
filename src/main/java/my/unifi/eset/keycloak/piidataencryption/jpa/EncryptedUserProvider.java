@@ -57,7 +57,7 @@ public class EncryptedUserProvider extends JpaUserProvider {
         }
         List<String> encrypted = Arrays.asList(UserModel.SEARCH, "username", "email", "firstName", "lastName");
         for (Map.Entry<String, String> attribute : attributes.entrySet()) {
-            if (encrypted.contains(attribute.getKey()) || LogicUtils.shouldEncryptAttribute(ks, attribute.getKey())) {
+            if (encrypted.contains(attribute.getKey()) || LogicUtils.shouldEncryptAttribute(ks, realm.getId(), attribute.getKey())) {
                 attribute.setValue(LogicUtils.hash(attribute.getValue()));
             }
         }

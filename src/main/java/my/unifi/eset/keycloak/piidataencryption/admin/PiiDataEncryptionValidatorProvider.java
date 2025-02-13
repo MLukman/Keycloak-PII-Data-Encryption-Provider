@@ -1,15 +1,11 @@
 package my.unifi.eset.keycloak.piidataencryption.admin;
 
-import my.unifi.eset.keycloak.piidataencryption.utils.LogicUtils;
 import java.util.List;
-import org.keycloak.component.ComponentValidationException;
-import org.keycloak.models.KeycloakSession;
 import org.keycloak.provider.ConfiguredProvider;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.provider.ProviderConfigurationBuilder;
 import org.keycloak.validate.AbstractSimpleValidator;
 import org.keycloak.validate.ValidationContext;
-import org.keycloak.validate.ValidationResult;
 import org.keycloak.validate.ValidatorConfig;
 
 /**
@@ -43,14 +39,6 @@ public class PiiDataEncryptionValidatorProvider extends AbstractSimpleValidator 
                 .defaultValue(true)
                 .add();
         return builder.build();
-    }
-
-    @Override
-    public ValidationResult validateConfig(KeycloakSession session, ValidatorConfig config) {
-        if (config.getBooleanOrDefault("enable", false) && !LogicUtils.isUserEncryptionEnabled(session, session.getContext().getRealm())) {
-            throw new ComponentValidationException(String.format(" (%s -> Please enable user entity encryption in its tab under this realm settings)", ID));
-        }
-        return super.validateConfig(session, config);
     }
 
     @Override
