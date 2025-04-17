@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 env:
-  KEYCLOAK_VERSION: 25.0.6
+  KEYCLOAK_VERSION: 26.2.0
 
 jobs:
   build-and-release:

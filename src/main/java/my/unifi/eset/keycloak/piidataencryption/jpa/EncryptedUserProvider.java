@@ -30,7 +30,7 @@ public class EncryptedUserProvider extends JpaUserProvider {
         if (null != (user = super.getUserByUsername(realm, username))) {
             return user;
         }
-        logger.debugf("getUserByUsername (hash): " + username);
+        logger.debugf("getUserByUsername (using hash): " + username);
         return super.getUserByUsername(realm, LogicUtils.hash(username));
     }
 
@@ -40,7 +40,7 @@ public class EncryptedUserProvider extends JpaUserProvider {
         if (null != (user = super.getUserByEmail(realm, email))) {
             return user;
         }
-        logger.debugf("getUserByEmail (with hash): " + email);
+        logger.debugf("getUserByEmail (using hash): " + email);
         return super.getUserByEmail(realm, LogicUtils.hash(email));
     }
 
@@ -51,9 +51,9 @@ public class EncryptedUserProvider extends JpaUserProvider {
             return results.stream();
         }
         try {
-            logger.debugf("searchForUserStream (with hash): " + new ObjectMapper().writeValueAsString(attributes));
+            logger.debugf("searchForUserStream (using hash): " + new ObjectMapper().writeValueAsString(attributes));
         } catch (JsonProcessingException ex) {
-            logger.debugf("searchForUserStream (with hash): <unable to convert into JSON>");
+            logger.warnf("searchForUserStream (using hash): <unable to convert into JSON>");
         }
         List<String> encrypted = Arrays.asList(UserModel.SEARCH, "username", "email", "firstName", "lastName");
         for (Map.Entry<String, String> attribute : attributes.entrySet()) {

@@ -38,7 +38,7 @@ public class UserEntityEncryptionConfigurationProvider implements UiTabProvider,
 
     @Override
     public String getPath() {
-        return "/:realm/realm-settings/:tab?";
+        return "/:realm/realm-settings/:tab";
     }
 
     @Override

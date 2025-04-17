@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import my.unifi.eset.keycloak.piidataencryption.utils.LogicUtils;
 import jakarta.persistence.EntityManager;
+import org.jboss.logging.Logger;
 import org.keycloak.connections.jpa.JpaConnectionProvider;
 import org.keycloak.events.Event;
 import org.keycloak.events.EventListenerProvider;
@@ -27,6 +28,7 @@ import org.keycloak.models.jpa.entities.UserEntity;
 public class EventListener implements EventListenerProvider {
 
     private final KeycloakSession session;
+    static final Logger logger = Logger.getLogger(EventListener.class);
 
     public EventListener(KeycloakSession session) {
         this.session = session;
@@ -39,39 +41,44 @@ public class EventListener implements EventListenerProvider {
      */
     @Override
     public void onEvent(Event event) {
-        if (!LogicUtils.isUserEncryptionEnabled(session, event.getRealmId())) {
-            return;
-        }
         if (event.getType() == EventType.REGISTER || event.getType() == EventType.UPDATE_PROFILE) {
             UserModel user = session.users().getUserById(session.realms().getRealm(event.getRealmId()), event.getUserId());
-            encryptUserWithId(user.getId());
+            if (!LogicUtils.isUserEncryptionEnabled(session, event.getRealmId())) {
+                logger.debugf("Event: USER_ENCRYPTION_SKIPPED, Realm: %s, User: %s", event.getRealmId(), user.getId());
+                return;
+            }
+            encryptUserWithId(event.getRealmId(), user.getId());
         }
     }
 
     /**
      * Intercept UPDATE admin event on USER resource
      *
-     * @param ae
+     * @param event
      * @param bln
      */
     @Override
-    public void onEvent(AdminEvent ae, boolean bln) {
-        if (!LogicUtils.isUserEncryptionEnabled(session, ae.getRealmId())) {
-            return;
-        }
-        if (ae.getResourceType() == ResourceType.USER) {
-            if (ae.getOperationType() == OperationType.CREATE) {
+    public void onEvent(AdminEvent event, boolean bln) {
+        if (event.getResourceType() == ResourceType.USER) {
+            String userId = null;
+            if (event.getOperationType() == OperationType.CREATE) {
                 try {
-                    JsonNode json = (new ObjectMapper()).readTree(ae.getRepresentation());
+                    JsonNode json = (new ObjectMapper()).readTree(event.getRepresentation());
                     String username = json.get("username").asText();
-                    UserModel user = session.users().getUserByUsername(session.realms().getRealm(ae.getRealmId()), username);
-                    encryptUserWithId(user.getId());
+                    UserModel user = session.users().getUserByUsername(session.realms().getRealm(event.getRealmId()), username);
+                    userId = user != null ? user.getId() : null;
                 } catch (JsonProcessingException ex) {
                 }
             }
-            if (ae.getOperationType() == OperationType.UPDATE) {
-                String userId = ae.getResourcePath().split("/")[1];
-                encryptUserWithId(userId);
+            if (event.getOperationType() == OperationType.UPDATE) {
+                userId = event.getResourcePath().split("/")[1];
+            }
+            if (userId != null) {
+                if (!LogicUtils.isUserEncryptionEnabled(session, event.getRealmId())) {
+                    logger.debugf("Event: USER_ENCRYPTION_SKIPPED, Realm: %s, User: %s", event.getRealmId(), userId);
+                    return;
+                }
+                encryptUserWithId(event.getRealmId(), userId);
             }
         }
     }
@@ -80,7 +87,8 @@ public class EventListener implements EventListenerProvider {
     public void close() {
     }
 
-    private void encryptUserWithId(String userId) {
+    private void encryptUserWithId(String realmId, String userId) {
+        logger.debugf("Event: USER_ENCRYPTION, Realm: %s, User: %s", realmId, userId);
         EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
         UserEntity userEntity = LogicUtils.getUserEntity(em, userId);
         LogicUtils.encryptUserEntity(session, em, userEntity);

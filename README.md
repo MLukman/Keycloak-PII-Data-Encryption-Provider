@@ -75,19 +75,19 @@ Note: the "declarative-ui" flag is only necessary while the feature is still con
 
 The encryption needs to be enabled realm-by-realm. Firstly, this provider requires enabling an event listener for the particular realms that require data encryption. Go to the `Realm settings` page and navigate to the `Events` tab. Add the event listener `pii-data-encryption`, as shown below: 
 
-![Screenshot for adding event listener](screenshot-add-event-listener.png)
+![Screenshot for adding event listener](docs/screenshot-add-event-listener.png)
 
 ### Enabling the encryption
 
 To actually enable the encryption of the common user attributes `username`, `email`, `first name` and `last name` for users in a particular realm, go to the `Realm settings` page and navigate to the custom tab `User Entity Encryption`. Turn on the `Enable encryption` switch on that tab, as shown below:
 
-![Screenshot of "User Entity Encryption" tab](screenshot-enable-user-entity-encryption.png)
+![Screenshot of "User Entity Encryption" tab](docs/screenshot-enable-user-entity-encryption.png)
 
 ### Extending the encryption to custom attributes
 
 To enable encryption of any custom attributes, go to the `User profile` tab and click on the specific attributes and add the custom validator of type `pii-data-encryption` under the `Validations` section.
 
-![Screenshot of "Add validator" popup dialog](screenshot-add-validator.png)
+![Screenshot of "Add validator" popup dialog](docs/screenshot-add-validator.png)
 
 This provider also automatically encrypts any user attributes that have their names start with "pii-" prefix even without the validator.
 

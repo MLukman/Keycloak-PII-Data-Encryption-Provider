@@ -1,7 +1,5 @@
 package my.unifi.eset.keycloak.piidataencryption.utils;
 
-import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserAttributeEntity;
-import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserEntity;
 import org.jboss.logging.Logger;
 
 /**
@@ -11,8 +9,6 @@ import org.jboss.logging.Logger;
  */
 public class DecryptionFailureException extends RuntimeException {
 
-    static final Logger logger = Logger.getLogger(DecryptionFailureException.class);
-
     public DecryptionFailureException(String realmId, String userId) {
         this(String.format("Event: USER_DECRYPTION_FAILURE, Realm: %s, User: %s", realmId, userId));
     }
@@ -21,8 +17,11 @@ public class DecryptionFailureException extends RuntimeException {
         this(String.format("Event: USER_ATTRIBUTE_DECRYPTION_FAILURE, Realm: %s, User: %s, Attribute: %s", realmId, userId, attributeName));
     }
 
+    public void outputToLog(Logger logger) {
+        logger.warn(getMessage());
+    }
+
     private DecryptionFailureException(String errorMessage) {
         super(errorMessage);
-        logger.warn(errorMessage);
     }
 }

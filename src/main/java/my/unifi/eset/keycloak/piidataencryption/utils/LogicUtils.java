@@ -9,6 +9,7 @@ import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserAttributeEntity
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserEntity;
 import my.unifi.eset.keycloak.piidataencryption.jpa.EncryptedUserProvider;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.jboss.logging.Logger;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserProvider;
@@ -29,6 +30,8 @@ import org.keycloak.userprofile.UserProfileProvider;
  */
 public final class LogicUtils {
 
+    static final Logger logger = Logger.getLogger(LogicUtils.class);
+
     /**
      * Enables/disables user encryption for a particular realm
      *
@@ -37,6 +40,7 @@ public final class LogicUtils {
      */
     public static void setUserEncryptionEnabled(RealmModel realm, boolean enabled) {
         realm.setAttribute("users.encrypt", enabled);
+        logger.debugf("Event: ENCRYPTION_%s, Realm: %s", enabled ? "ENABLED" : "DISABLED", realm.getId());
     }
 
     /**
@@ -175,6 +179,7 @@ public final class LogicUtils {
                 continue; // skip service accounts
             }
             encryptUserEntity(ks, em, user);
+            logger.debugf("Event: USER_ENCRYPTION, Realm: %s, User: %s", realm.getId(), user.getId());
             for (UserAttributeEntity uae : user.getAttributes()) {
                 encryptUserAttributeEntity(ks, em, uae);
             }
@@ -265,13 +270,14 @@ public final class LogicUtils {
                 EncryptedUserEntity eue = getEncryptedUserEntity(em, user, false);
                 if (eue != null) {
                     decryptUserEntity(em, realm, eue);
+                    logger.debugf("Event: USER_DECRYPTION, Realm: %s, User: %s", realm.getId(), user.getId());
                 }
                 List<EncryptedUserAttributeEntity> encryptedAttributes = em.createQuery("SELECT a FROM EncryptedUserAttributeEntity a WHERE a.user = :user", EncryptedUserAttributeEntity.class).setParameter("user", user).getResultList();
                 for (EncryptedUserAttributeEntity euae : encryptedAttributes) {
                     decryptUserAttributeEntity(em, realm, euae);
                 }
             } catch (DecryptionFailureException ex) {
-                // suppress because log warn is already outputted
+                ex.outputToLog(logger);
             }
         }
     }

@@ -51,7 +51,7 @@ public class EntityListener implements Integrator, PreLoadEventListener {
                 handlePreLoadEventUserAttributeEntity(ple, uae);
             }
         } catch (DecryptionFailureException ex) {
-            // suppress because log warn is already outputed
+            ex.outputToLog(logger);
         }
     }
 
