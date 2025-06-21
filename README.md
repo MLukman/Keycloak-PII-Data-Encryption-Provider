@@ -58,7 +58,7 @@ RUN /opt/keycloak/bin/kc.sh build --db=mysql --features="declarative-ui" --spi-u
 
 ### Setting the encryption key
 
-This provider requires the encryption key to be provided via environment variable `KC_PII_ENCKEY`. There is, however, a default fallback that uses MD5 hash of environment variable `KC_DB_URL` if the encryption key is not provided. If you rely on this fallback and in the future need to migrate your Keycloak data into another databases that results in a different value of `KC_DB_URL`, you need to get the old value of `KC_DB_URL`, encode it using lowercased MD5 hash and set the value to the `KC_PII_ENCKEY` environment variable.
+This provider requires the encryption key to be provided via environment variable **`KC_PII_ENCKEY`** and it needs to be **at least 16 characters long**. There is, however, a default fallback that uses MD5 hash of environment variable `KC_DB_URL` if the encryption key is not provided. If you rely on this fallback and in the future need to migrate your Keycloak data into another databases that results in a different value of `KC_DB_URL`, you need to get the old value of `KC_DB_URL`, encode it using lowercased MD5 hash and set the value to the `KC_PII_ENCKEY` environment variable.
 
 ### Enabling 'jpa-encrypted' user provider and 'declarative-ui' feature
 
