@@ -33,6 +33,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jboss.logging.Logger;
+import org.keycloak.quarkus.runtime.configuration.Configuration;
 
 /**
  * Provides encryption functionalities.
@@ -44,7 +45,7 @@ public final class EncryptionUtils {
     /**
      * Encryption algorithm to use.
      */
-    static String algorithm = "AES/CBC/PKCS5Padding";
+    static final String ALGORITHM = "AES/CBC/PKCS5Padding";
 
     /**
      * String to prefixed to encrypted value before it is stored in db to
@@ -67,7 +68,7 @@ public final class EncryptionUtils {
             }
             byte[] iv = new byte[16];
             new SecureRandom().nextBytes(iv);
-            Cipher cipher = Cipher.getInstance(algorithm);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.ENCRYPT_MODE, getEncryptionKey(), new IvParameterSpec(iv));
             byte[] cipherText = cipher.doFinal(value.getBytes());
             return CIPHERTEXT_PREFIX + Base64.getEncoder().encodeToString(ArrayUtils.addAll(iv, cipherText));
@@ -95,7 +96,7 @@ public final class EncryptionUtils {
             byte[] cipherTextWithIv = Base64.getDecoder().decode(value.substring(CIPHERTEXT_PREFIX.length()));
             byte[] iv = ArrayUtils.subarray(cipherTextWithIv, 0, 16);
             byte[] cipherText = ArrayUtils.subarray(cipherTextWithIv, 16, cipherTextWithIv.length);
-            Cipher cipher = Cipher.getInstance(algorithm);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, getEncryptionKey(), new IvParameterSpec(iv));
             byte[] plainText = cipher.doFinal(cipherText);
             return new String(plainText);
@@ -121,8 +122,8 @@ public final class EncryptionUtils {
     }
 
     /**
-     * Gets encryption key from KC_PII_ENCKEY envvar, or generate one from
-     * KC_DB_URL envvar.
+     * Gets encryption key from KC_PII_ENCKEY environment variable, or generate
+     * one from the JDBC URL of the database.
      *
      * @return SecretKey
      * @throws NoSuchAlgorithmException
@@ -131,22 +132,19 @@ public final class EncryptionUtils {
         if (key != null) {
             return key;
         }
-
         String rawkey = System.getenv("KC_PII_ENCKEY");
         if (rawkey == null || rawkey.isBlank()) {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(System.getenv("KC_DB_URL").getBytes());
+            String dbUrl = Configuration.getRawValue("kc.db-url");
+            if (dbUrl == null || dbUrl.isBlank()) {
+                throw new IllegalArgumentException("Unable to generate encryption key from JDBC URL of the database. Please explicitly set the encryption key using KC_PII_ENCKEY environment variable.");
+            }
+            md.update(dbUrl.getBytes());
             rawkey = HexFormat.of().formatHex(md.digest()).toLowerCase();
-            Logger.getLogger(EncryptionUtils.class).warn("Encryption key generated using MD5 hash of KC_DB_URL. It is recommended to set this key as KC_PII_ENCKEY envvar.");
+            Logger.getLogger(EncryptionUtils.class).warn(String.format("Encryption key %s was generated using MD5 hash of JDBC URL of the database. It is recommended to set this key as KC_PII_ENCKEY environment variable.", rawkey));
         }
-
         SecretKeySpec genKey = new SecretKeySpec(rawkey.getBytes(), "AES");
-        try {
-            validateKey(genKey);
-        } catch (IllegalArgumentException e) {
-            throw e;
-        }
-
+        validateKey(genKey);
         return key = genKey;
     }
 
@@ -157,12 +155,12 @@ public final class EncryptionUtils {
      */
     public static void validateKey(SecretKeySpec candidateKey) {
         try {
-            Cipher cipher = Cipher.getInstance(algorithm);
+            Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.ENCRYPT_MODE, candidateKey, new IvParameterSpec(new byte[16]));
             // Trivial encryption to validate
             cipher.doFinal("test".getBytes(StandardCharsets.UTF_8));
         } catch (InvalidAlgorithmParameterException | InvalidKeyException | NoSuchAlgorithmException | BadPaddingException | IllegalBlockSizeException | NoSuchPaddingException e) {
-            throw new IllegalArgumentException("Invalid encryption key for algorithm " + algorithm, e);
+            throw new IllegalArgumentException("Invalid encryption key for algorithm " + ALGORITHM, e);
         }
     }
 

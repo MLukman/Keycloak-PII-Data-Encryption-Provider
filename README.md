@@ -20,7 +20,7 @@ cd Keycloak-PII-Data-Encryption-Provider
 Compile this provider into a JAR file using the following command. JDK 17 or above and Maven are required to be pre-installed on the machine. Make sure to match the `keycloak.version` parameter with the version of the target Keycloak.
 
 ```shell 
-mvn clean package -Dkeycloak.version=26.1.1
+mvn clean package -Dkeycloak.version=26.3.0
 ```
 
 Copy paste the packaged JAR file from inside `target` folder into Keycloak `providers` folder. Run `kc.sh build` command to get Keycloak to register this provider.
@@ -31,7 +31,7 @@ Use this method if this provider needs to be pre-packaged inside a custom Keyclo
 
 ```dockerfile
 # ARG defined before FROM in multi-staged Dockerfile is shared among the stages
-ARG KEYCLOAK_VERSION=26.1.1
+ARG KEYCLOAK_VERSION=26.3.0
 
 # Build the provider
 FROM maven:3.8.1-openjdk-17-slim AS keycloak-pii-data-encryption
@@ -58,11 +58,11 @@ RUN /opt/keycloak/bin/kc.sh build --db=mysql --features="declarative-ui" --spi-u
 
 ### Setting the encryption key
 
-This provider requires the encryption key to be provided via environment variable **`KC_PII_ENCKEY`** and it needs to be **at least 16 characters long**. There is, however, a default fallback that uses MD5 hash of environment variable `KC_DB_URL` if the encryption key is not provided. If you rely on this fallback and in the future need to migrate your Keycloak data into another databases that results in a different value of `KC_DB_URL`, you need to get the old value of `KC_DB_URL`, encode it using lowercased MD5 hash and set the value to the `KC_PII_ENCKEY` environment variable.
+This provider requires the encryption key to be provided via environment variable **`KC_PII_ENCKEY`** and it needs to be **at least 16 characters long**. If the encryption key is not provided, however, there is a default fallback that uses MD5 hash of the database JDBC URL, either using configuration parameter `db-url` or environment variable `KC_DB_URL`. If you rely on this fallback and in the future need to migrate your Keycloak data into another databases that results in a different value of JDBC URL, you need to get the old value of JDBC URL, encode it using lowercased MD5 hash and set the value to the `KC_PII_ENCKEY` environment variable.
 
 ### Enabling 'jpa-encrypted' user provider and 'declarative-ui' feature
 
-Starting with version 2.0, this provider requires the Keycloak instance to be either built or started with two flags:
+This provider requires the Keycloak instance to be either built or started with two flags:
 
 -  `--spi-user-provider=jpa-encrypted`
 - `--features="declarative-ui"`

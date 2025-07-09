@@ -45,7 +45,7 @@ public class EncryptedUserAttributeEntity {
     @Column(name = "NAME", length = 255)
     protected String name;
 
-    @Column(name = "VALUE", length = 1000)
+    @Column(name = "VALUE")
     protected String value;
 
     public EncryptedUserAttributeEntity() {

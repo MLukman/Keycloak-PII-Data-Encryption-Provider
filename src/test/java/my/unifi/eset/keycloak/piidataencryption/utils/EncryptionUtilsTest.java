@@ -29,7 +29,6 @@ import uk.org.webcompere.systemstubs.jupiter.SystemStubsExtension;
 
 import java.security.NoSuchAlgorithmException;
 
-import static my.unifi.eset.keycloak.piidataencryption.utils.EncryptionUtils.algorithm;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(SystemStubsExtension.class)
@@ -74,8 +73,7 @@ class EncryptionUtilsTest {
             EncryptionUtils.getEncryptionKey();
         });
 
-        assertEquals("Invalid encryption key for algorithm " + algorithm, thrown.getMessage());
-
+        assertEquals("Invalid encryption key for algorithm " + EncryptionUtils.ALGORITHM, thrown.getMessage());
 
         environmentVariables.set(envVarKey, validEncKey);
         assertDoesNotThrow(() -> EncryptionUtils.getEncryptionKey(), "should work once the key is correct and not reuse the previous one");
@@ -98,8 +96,7 @@ class EncryptionUtilsTest {
             EncryptionUtils.validateKey(invalidKey);
         });
 
-        String expectedMessage = "Invalid encryption key for algorithm " + algorithm;
-        assertThrows(IllegalArgumentException.class, () -> EncryptionUtils.validateKey(invalidKey));
-        assert(thrown.getMessage().contains(expectedMessage));
+        String expectedMessage = "Invalid encryption key for algorithm " + EncryptionUtils.ALGORITHM;
+        assert (thrown.getMessage().contains(expectedMessage));
     }
 }

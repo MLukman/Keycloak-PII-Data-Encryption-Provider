@@ -186,7 +186,7 @@ public final class LogicUtils {
      *
      * @param ks KeycloakSession
      * @param em EntityManager
-     * @param realmId The realm ID
+     * @param realm The RealmModel to encrypt all of its users
      */
     public static void encryptExistingUserEntities(KeycloakSession ks, EntityManager em, RealmModel realm) {
         List<UserEntity> realmUsers = em.createQuery("SELECT u FROM UserEntity u WHERE u.realmId = :realmId", UserEntity.class).setParameter("realmId", realm.getId()).getResultList();
