@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-
 package my.unifi.eset.keycloak.piidataencryption.utils;
 
 import jakarta.persistence.EntityManager;
@@ -97,12 +96,16 @@ public final class LogicUtils {
         if (attributeName.startsWith("pii-")) {
             return true;
         }
-        UserProfileProvider upp = ks.getProvider(UserProfileProvider.class);
-        if (upp instanceof DeclarativeUserProfileProvider dup) {
-            UPAttribute upa = dup.getConfiguration().getAttribute(attributeName);
-            if (upa != null && upa.getValidations().containsKey(PiiDataEncryptionValidatorProvider.ID)) {
-                return Boolean.parseBoolean(String.valueOf(upa.getValidations().get(PiiDataEncryptionValidatorProvider.ID).getOrDefault("enable", false)));
+        try {
+            UserProfileProvider upp = ks.getProvider(UserProfileProvider.class);
+            if (upp instanceof DeclarativeUserProfileProvider dup) {
+                UPAttribute upa = dup.getConfiguration().getAttribute(attributeName);
+                if (upa != null && upa.getValidations().containsKey(PiiDataEncryptionValidatorProvider.ID)) {
+                    return Boolean.parseBoolean(String.valueOf(upa.getValidations().get(PiiDataEncryptionValidatorProvider.ID).getOrDefault("enable", false)));
+                }
             }
+        } catch (Exception ex) {
+            return false;
         }
         return false;
     }
@@ -190,6 +193,7 @@ public final class LogicUtils {
      */
     public static void encryptExistingUserEntities(KeycloakSession ks, EntityManager em, RealmModel realm) {
         List<UserEntity> realmUsers = em.createQuery("SELECT u FROM UserEntity u WHERE u.realmId = :realmId", UserEntity.class).setParameter("realmId", realm.getId()).getResultList();
+        logger.debugf("Event: REALM_USERS_ENCRYPTION, Realm: %s, Total Users: %s", realm.getId(), realmUsers.size());
         for (UserEntity user : realmUsers) {
             if (user.getServiceAccountClientLink() != null) {
                 continue; // skip service accounts
@@ -214,9 +218,8 @@ public final class LogicUtils {
             return;
         }
         EncryptedUserEntity eue = LogicUtils.getEncryptedUserEntity(em, ue, true);
-        if (ue.getUsername().length() == 40 && ue.getUsername().matches("^[0-9a-fA-F]+$")) {
+        if (isHash(ue.getUsername())) {
             // somehow the value is already hashed so we skip it to avoid double hash/encrypt
-            // we only need to check email because email has a specific string format
             return;
         }
         eue.setUsername(EncryptionUtils.encryptValue(ue.getUsername()));
@@ -249,7 +252,7 @@ public final class LogicUtils {
     public static void encryptUserAttributeEntity(KeycloakSession ks, EntityManager em, UserAttributeEntity uae) {
         if (shouldEncryptAttribute(ks, uae)) {
             String value = uae.getValue();
-            if (value.length() == 40 && value.matches("^[0-9a-fA-F]+$")) {
+            if (isHash(value)) {
                 // somehow the value is already hashed so we skip it to avoid double hash/encrypt
                 return;
             }
@@ -363,6 +366,10 @@ public final class LogicUtils {
      */
     public static String hash(String raw) {
         return raw != null ? DigestUtils.sha1Hex(raw.trim().toLowerCase()) : null;
+    }
+
+    public static boolean isHash(String value) {
+        return value.length() == 40 && value.matches("^[0-9a-fA-F]+$");
     }
 
     // Makes this class un-instantiatable

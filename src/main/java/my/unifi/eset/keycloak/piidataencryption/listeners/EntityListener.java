@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-
 package my.unifi.eset.keycloak.piidataencryption.listeners;
 
 import my.unifi.eset.keycloak.piidataencryption.utils.EncryptionUtils;
@@ -77,7 +76,10 @@ public class EntityListener implements Integrator, PreLoadEventListener {
         if (eue != null) {
             Object[] states = ple.getState();
             Map<String, Integer> cols = collectColumnIndices(ple.getPersister().getEntityMetamodel().getPropertyNames());
-            if (validateHashValueVsEncryptedValue((String) states[cols.get("username")], eue.getUsername())) {
+            if (!LogicUtils.isHash((String) states[cols.get("username")])) {
+                // skip because the entity is already decrypted
+                logger.debugf("Event: USER_ALREADY_DECRYPTED, Realm: %s, User: %s", states[cols.get("realmId")], ue.getId());
+            } else if (validateHashValueVsEncryptedValue((String) states[cols.get("username")], eue.getUsername())) {
                 logger.debugf("Event: USER_DECRYPTION, Realm: %s, User: %s", states[cols.get("realmId")], ue.getId());
                 states[cols.get("username")] = EncryptionUtils.decryptValue(eue.getUsername());
                 states[cols.get("email")] = EncryptionUtils.decryptValue(eue.getEmail());
