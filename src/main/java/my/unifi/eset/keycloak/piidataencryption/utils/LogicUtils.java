@@ -214,6 +214,9 @@ public final class LogicUtils {
      * @param ue The UserEntity to encrypt
      */
     public static void encryptUserEntity(KeycloakSession ks, EntityManager em, UserEntity ue) {
+        if (ue == null) {
+            return;
+        }
         if (!LogicUtils.isUserEncryptionEnabled(ks, ue.getRealmId())) {
             return;
         }

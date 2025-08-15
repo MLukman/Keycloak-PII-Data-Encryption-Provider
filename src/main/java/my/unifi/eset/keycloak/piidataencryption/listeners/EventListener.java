@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-
 package my.unifi.eset.keycloak.piidataencryption.listeners;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -101,13 +100,17 @@ public class EventListener implements EventListenerProvider {
             logger.debugf("Event: USER_ENCRYPTION, Realm: %s, User: %s", realmId, userId);
             EntityManager em = session.getProvider(JpaConnectionProvider.class).getEntityManager();
             UserEntity userEntity = LogicUtils.getUserEntity(em, userId);
-            LogicUtils.encryptUserEntity(session, em, userEntity);
-            for (UserAttributeEntity uae : userEntity.getAttributes()) {
-                LogicUtils.encryptUserAttributeEntity(session, em, uae);
+            if (userEntity != null) {
+                LogicUtils.encryptUserEntity(session, em, userEntity);
+                for (UserAttributeEntity uae : userEntity.getAttributes()) {
+                    LogicUtils.encryptUserAttributeEntity(session, em, uae);
+                }
+                em.flush();
+            } else {
+                logger.debugf("Event: USER_ENCRYPTION_SKIPPED_NOT_FOUND, Realm: %s, User: %s", realmId, userId);
             }
-            em.flush();
         } else {
-            logger.debugf("Event: USER_ENCRYPTION_SKIPPED, Realm: %s, User: %s", realmId, userId);
+            logger.debugf("Event: USER_ENCRYPTION_SKIPPED_NOT_ENABLED, Realm: %s, User: %s", realmId, userId);
         }
     }
 

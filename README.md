@@ -60,14 +60,13 @@ RUN /opt/keycloak/bin/kc.sh build --db=mysql --features="declarative-ui" --spi-u
 
 This provider requires the encryption key to be provided via environment variable **`KC_PII_ENCKEY`** and it needs to be **at least 16 characters long**. If the encryption key is not provided, however, there is a default fallback that uses MD5 hash of the database JDBC URL, either using configuration parameter `db-url` or environment variable `KC_DB_URL`. If you rely on this fallback and in the future need to migrate your Keycloak data into another databases that results in a different value of JDBC URL, you need to get the old value of JDBC URL, encode it using lowercased MD5 hash and set the value to the `KC_PII_ENCKEY` environment variable.
 
-### Enabling 'jpa-encrypted' user provider and 'declarative-ui' feature
+### Enabling 'declarative-ui' feature
 
-This provider requires the Keycloak instance to be either built or started with two flags:
+This provider requires the Keycloak instance to be either built or started with the following flag:
 
--  `--spi-user-provider=jpa-encrypted`
-- `--features="declarative-ui"`
+-  `--features="declarative-ui"`
 
-These flags can be added to the `build` command with a condition that the `start` command has the `--optimized` flag, or for `start` without that flag or `start-dev` command, the two flags are to be added to the `start` or `start-dev` commands.
+The flag can be added to the `build` command with a condition that the `start` command has the `--optimized` flag, or for `start` without that flag or `start-dev` command, the flag is to be added to the `start` or `start-dev` commands.
 
 Note: the "declarative-ui" flag is only necessary while the feature is still considered experimental. Once it is enabled by default in future Keycloak versions, the flag will no longer be necessary.
 

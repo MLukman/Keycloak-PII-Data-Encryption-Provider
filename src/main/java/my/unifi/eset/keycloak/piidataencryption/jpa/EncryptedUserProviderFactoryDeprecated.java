@@ -15,23 +15,11 @@
  */
 package my.unifi.eset.keycloak.piidataencryption.jpa;
 
-import jakarta.persistence.EntityManager;
-import org.keycloak.connections.jpa.JpaConnectionProvider;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.UserProvider;
-import org.keycloak.models.jpa.JpaUserProviderFactory;
-
-public class EncryptedUserProviderFactory extends JpaUserProviderFactory {
+public class EncryptedUserProviderFactoryDeprecated extends EncryptedUserProviderFactory {
 
     @Override
-    public UserProvider create(KeycloakSession ks) {
-        EntityManager em = ks.getProvider(JpaConnectionProvider.class).getEntityManager();
-        return new EncryptedUserProvider(ks, em);
-    }
-
-    @Override
-    public int order() {
-        return 1000;
+    public String getId() {
+        return "jpa-encrypted";
     }
 
 }

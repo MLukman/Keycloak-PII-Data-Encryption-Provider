@@ -18,5 +18,5 @@ FROM quay.io/keycloak/keycloak:$KEYCLOAK_VERSION
 COPY --from=provider-pii /app/target/*.jar /opt/keycloak/providers
 
 # Need to build after adding providers
-RUN /opt/keycloak/bin/kc.sh build --db=mysql --features="declarative-ui" --spi-user-provider=jpa-encrypted
+RUN /opt/keycloak/bin/kc.sh build --db=mysql --features="declarative-ui"
 

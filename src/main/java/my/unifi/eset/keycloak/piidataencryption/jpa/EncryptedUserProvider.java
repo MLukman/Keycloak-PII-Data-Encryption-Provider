@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License.
  */
-
 package my.unifi.eset.keycloak.piidataencryption.jpa;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -78,6 +77,15 @@ public class EncryptedUserProvider extends JpaUserProvider {
             }
         }
         return super.searchForUserStream(realm, attributes, firstResult, maxResults);
+    }
+
+    @Override
+    public UserModel addUser(RealmModel realm, String id, String username, boolean addDefaultRoles, boolean addDefaultRequiredActions) {
+        UserModel userModel = super.addUser(realm, id, username, addDefaultRoles, addDefaultRequiredActions);
+        LogicUtils.encryptUserEntity(ks, em, LogicUtils.getUserEntity(em, userModel.getId()));
+        em.flush();
+        logger.debugf("addUser (encrypted): " + username);
+        return userModel;
     }
 
 }
