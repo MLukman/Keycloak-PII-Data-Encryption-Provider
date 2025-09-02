@@ -135,7 +135,7 @@ public final class EncryptionUtils {
         String rawkey = System.getenv("KC_PII_ENCKEY");
         if (rawkey == null || rawkey.isBlank()) {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            String dbUrl = Configuration.getRawValue("kc.db-url");
+            String dbUrl = Configuration.getKcConfigValue("db-url").getRawValue();
             if (dbUrl == null || dbUrl.isBlank()) {
                 throw new IllegalArgumentException("Unable to generate encryption key from JDBC URL of the database. Please explicitly set the encryption key using KC_PII_ENCKEY environment variable.");
             }
