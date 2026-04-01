@@ -18,6 +18,14 @@ package my.unifi.eset.keycloak.piidataencryption.jpa;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +36,9 @@ import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.jpa.JpaUserProvider;
+import org.keycloak.models.jpa.UserAdapter;
+import org.keycloak.models.jpa.entities.UserAttributeEntity;
+import org.keycloak.models.jpa.entities.UserEntity;
 
 public class EncryptedUserProvider extends JpaUserProvider {
 
@@ -76,7 +87,85 @@ public class EncryptedUserProvider extends JpaUserProvider {
                 attribute.setValue(LogicUtils.hash(attribute.getValue()));
             }
         }
-        return super.searchForUserStream(realm, attributes, firstResult, maxResults);
+        return searchByHashedAttributes(realm, attributes, firstResult, maxResults);
+    }
+
+    /**
+     * Searches for users using exact match on pre-hashed attribute values.
+     * <p>
+     * This bypasses JpaUserProvider's default LOWER() wrapping which is redundant
+     * for SHA-1 hash values (already lowercase hex) and prevents Postgres from
+     * using a standard B-tree index on the value column.
+     */
+    private Stream<UserModel> searchByHashedAttributes(RealmModel realm, Map<String, String> attributes, Integer firstResult, Integer maxResults) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<UserEntity> cq = cb.createQuery(UserEntity.class);
+        Root<UserEntity> root = cq.from(UserEntity.class);
+
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(cb.equal(root.get("realmId"), realm.getId()));
+
+        // Exclude service accounts unless explicitly included
+        if (!Boolean.parseBoolean(attributes.getOrDefault(UserModel.INCLUDE_SERVICE_ACCOUNT, Boolean.FALSE.toString()))) {
+            predicates.add(cb.isNull(root.get("serviceAccountClientLink")));
+        }
+
+        for (Map.Entry<String, String> entry : attributes.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            if (value == null || value.isEmpty()) continue;
+
+            switch (key) {
+                case UserModel.SEARCH:
+                    // Hash was computed from the full search term — exact match across all user fields
+                    predicates.add(cb.or(
+                            cb.equal(root.get("username"), value),
+                            cb.equal(root.get("email"), value),
+                            cb.equal(root.get("firstName"), value),
+                            cb.equal(root.get("lastName"), value)
+                    ));
+                    break;
+                case "username":
+                    predicates.add(cb.equal(root.get("username"), value));
+                    break;
+                case "email":
+                    predicates.add(cb.equal(root.get("email"), value));
+                    break;
+                case "firstName":
+                    predicates.add(cb.equal(root.get("firstName"), value));
+                    break;
+                case "lastName":
+                    predicates.add(cb.equal(root.get("lastName"), value));
+                    break;
+                case UserModel.ENABLED:
+                    predicates.add(cb.equal(root.get("enabled"), Boolean.parseBoolean(value)));
+                    break;
+                case UserModel.EMAIL_VERIFIED:
+                    predicates.add(cb.equal(root.get("emailVerified"), Boolean.parseBoolean(value)));
+                    break;
+                case UserModel.EXACT:
+                case UserModel.INCLUDE_SERVICE_ACCOUNT:
+                    // Control flags, not search values
+                    break;
+                default:
+                    // Custom attribute — exact match on hashed value, no LOWER()
+                    Join<UserEntity, UserAttributeEntity> attrJoin = root.join("attributes", JoinType.INNER);
+                    predicates.add(cb.and(
+                            cb.equal(attrJoin.get("name"), key),
+                            cb.equal(attrJoin.get("value"), value)
+                    ));
+                    break;
+            }
+        }
+
+        cq.select(root).distinct(true).where(predicates.toArray(new Predicate[0]));
+
+        TypedQuery<UserEntity> tq = em.createQuery(cq);
+        if (firstResult != null && firstResult >= 0) tq.setFirstResult(firstResult);
+        if (maxResults != null && maxResults >= 0) tq.setMaxResults(maxResults);
+
+        return tq.getResultStream()
+                .map(entity -> new UserAdapter(ks, realm, em, entity));
     }
 
     @Override
