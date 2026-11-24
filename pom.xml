@@ -10,7 +10,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <keycloak.version>26.3.3</keycloak.version>
+        <keycloak.version>26.8.2</keycloak.version>
         <netbeans.hint.jdkPlatform>JDK_17</netbeans.hint.jdkPlatform>
         <junit.jupiter.version>5.9.2</junit.jupiter.version>
         <surefire.version>3.5.2</surefire.version>
