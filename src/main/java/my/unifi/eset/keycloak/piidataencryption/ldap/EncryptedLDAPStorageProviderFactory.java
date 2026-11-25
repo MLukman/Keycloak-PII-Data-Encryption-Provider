@@ -15,41 +15,24 @@
  */
 package my.unifi.eset.keycloak.piidataencryption.ldap;
 
-import java.util.Map;
-import org.keycloak.Config;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.storage.ldap.LDAPIdentityStoreRegistry;
 import org.keycloak.storage.ldap.LDAPStorageProvider;
 import org.keycloak.storage.ldap.LDAPStorageProviderFactory;
 import org.keycloak.storage.ldap.idm.store.ldap.LDAPIdentityStore;
-import org.keycloak.storage.ldap.mappers.LDAPConfigDecorator;
 
 public class EncryptedLDAPStorageProviderFactory extends LDAPStorageProviderFactory {
 
-    LDAPIdentityStoreRegistry ldapStoreRegistryOverride;
 
     @Override
     public int order() {
         return 1000;
     }
 
-    @Override
-    public void init(Config.Scope config) {
-        super.init(config);
-        this.ldapStoreRegistryOverride = new LDAPIdentityStoreRegistry();
-    }
-
-    @Override
-    public void close() {
-        super.close();
-        this.ldapStoreRegistryOverride = null;
-    }
 
     @Override
     public LDAPStorageProvider create(KeycloakSession session, ComponentModel model) {
-        Map<ComponentModel, LDAPConfigDecorator> configDecorators = getLDAPConfigDecorators(session, model);
-        LDAPIdentityStore ldapIdentityStore = this.ldapStoreRegistryOverride.getLdapStore(session, model, configDecorators);
+        LDAPIdentityStore ldapIdentityStore = super.create(session, model).getLdapIdentityStore();
         return new EncryptedLDAPStorageProvider(this, session, model, ldapIdentityStore);
     }
 
